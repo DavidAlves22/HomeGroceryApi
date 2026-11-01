@@ -1,0 +1,31 @@
+services:
+  banco:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: homegrocery
+      POSTGRES_USER: homegrocery
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    ports:
+      - "5433:5432"
+    volumes:
+      - banco-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homegrocery -d homegrocery"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      banco:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Padrao: "Host=banco;Port=5432;Database=homegrocery;Username=homegrocery;Password=${POSTGRES_PASSWORD}"
+      Jwt__ChaveSecreta: ${JWT_CHAVE_SECRETA:?defina JWT_CHAVE_SECRETA no .env}
+      Cors__OrigensPermitidas__0: ${CORS_ORIGEM:-http://localhost:8081}
+    ports:
+      - "5272:8080"
+
+volumes:
+  banco-dados:
