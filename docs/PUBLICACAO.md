@@ -65,6 +65,15 @@ Sem isto o navegador bloqueia as chamadas do app para a API.
    - iPhone (Safari): botão Compartilhar → **Adicionar à Tela de Início**.
 4. **Família:** em *Mais → Grupo familiar*, gere um código; no outro celular (outra conta), digite o código. Marque um item em um aparelho e veja aparecer no outro.
 
+## ATENÇÃO: o que vai em cada lugar
+
+| Variável | Onde | Valor |
+|---|---|---|
+| `ConnectionStrings__Padrao` | **só no Render** | URL do Neon (`postgresql://...`). **Secreta.** |
+| `EXPO_PUBLIC_API_URL` | Vercel | URL do **Render** (`https://...onrender.com`). Pública. |
+
+**Nunca** ponha a URL do banco na Vercel. Variáveis que começam com `EXPO_PUBLIC_` são embutidas no JavaScript do site e qualquer visitante consegue lê-las. Se isso acontecer: no Neon, *Roles → Reset password*, atualize o Render com a URL nova e corrija a variável na Vercel (e faça Redeploy).
+
 ## Se algo der errado
 
 | Sintoma | Causa provável | O que fazer |
