@@ -17,7 +17,7 @@ Tenha à mão: conta no GitHub com os repositórios `HomeGroceryApi` e `HomeGroc
 ## 1) Banco: Neon
 
 1. Entre em https://neon.com e crie a conta (pode ser com o GitHub).
-2. **Create project**. Nome: `homegrocery`. Versão do Postgres: a mais recente sugerida. **Região:** escolha uma dos EUA (a mais próxima da região que usará no Render, passo 2), para API e banco ficarem perto.
+2. **Create project**. Nome: `homegrocery`. Versão do Postgres: a mais recente sugerida. **Região:** **AWS US East 1 (N. Virginia)**: é a mesma região que o `render.yaml` usa no Render (Virginia), então API e banco ficam perto.
 3. Na tela do projeto, clique em **Connect**. Em "Connection string":
    - **Desmarque "Connection pooling"** (use a conexão direta; as migrations rodam nela).
    - Copie a URL inteira. Tem este formato: `postgresql://usuario:senha@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require`

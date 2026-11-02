@@ -5,6 +5,8 @@ services:
     name: homegrocery-api
     runtime: docker
     plan: free
+    # Mesma região do banco no Neon (AWS US East 1, N. Virginia): API e banco ficam perto, a consulta é rápida.
+    region: virginia
     dockerfilePath: ./Dockerfile
     healthCheckPath: /saude
     autoDeploy: true
