@@ -37,7 +37,14 @@ builder.Services.AddConfiguracoesIniciais(builder.Configuration);
 var app = builder.Build();
 
 // A hospedagem termina o HTTPS e repassa em HTTP; sem isto a API acharia que o cliente usa HTTP.
-app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
+var cabecalhosDoProxy = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
+
+// Por padrão o ASP.NET só confia em proxy local. Na hospedagem (Render) a API só é alcançável pelo proxy da própria
+// plataforma, então confiamos nele: sem isto todos os usuários pareceriam ter o mesmo IP e o limite de tentativas
+// de login seria dividido entre todo mundo.
+cabecalhosDoProxy.KnownNetworks.Clear();
+cabecalhosDoProxy.KnownProxies.Clear();
+app.UseForwardedHeaders(cabecalhosDoProxy);
 
 // Container não roda `dotnet ef database update` à parte: o próprio processo aplica o que faltar ao subir.
 using (var escopo = app.Services.CreateScope())

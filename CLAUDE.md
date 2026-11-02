@@ -67,3 +67,9 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - **Tempo real:** SignalR em `/hub/grupo` (token em `access_token`). `UnidadeDeTrabalho.SalvarAsync` descobre pelo ChangeTracker o que mudou (itens/listas, catálogo, membros) e publica DEPOIS de gravar, então nenhuma operação esquece de avisar. Evento só carrega ids; o app busca o dado novo pela API. Falha ao avisar nunca derruba a operação.
 - **Conflitos entre pessoas:** marcar/desmarcar é idempotente (vale a última); editar exige a versão do item (409 se outra pessoa mudou antes).
 - Índice de vínculo ativo NÃO é único: o EF insere o novo antes de desativar o antigo.
+
+## Publicação
+- Guia completo em `docs/PUBLICACAO.md` (Neon + Render + Vercel). `render.yaml` é o blueprint do Render; `vercel.json` (repo do app) define build/saída/headers.
+- `StringDeConexao.Normalizar` aceita a URL `postgresql://...` do Neon.
+- `UseForwardedHeaders` confia no proxy da plataforma (KnownNetworks/KnownProxies limpos): sem isso o rate limit por IP seria compartilhado por todos. Verificado com o contêiner (12 IPs distintos passam; o mesmo IP leva 429 após 10).
+- Imagem Docker validada localmente em modo Production (porta via `PORT`, migrations ao subir, CORS só da origem configurada, Swagger desligado).

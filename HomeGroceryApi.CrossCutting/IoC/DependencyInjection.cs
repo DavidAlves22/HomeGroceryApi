@@ -24,7 +24,7 @@ public static class DependencyInjection
         var conexao = configuracao.GetConnectionString("Padrao")
             ?? throw new InvalidOperationException("ConnectionStrings:Padrao ausente.");
 
-        servicos.AddDbContext<HomeGroceryDbContext>(o => o.UseNpgsql(conexao));
+        servicos.AddDbContext<HomeGroceryDbContext>(o => o.UseNpgsql(StringDeConexao.Normalizar(conexao)));
 
         servicos.AddIdentityCore<ApplicationUser>(o =>
         {

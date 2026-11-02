@@ -1,0 +1,22 @@
+# Blueprint do Render: cria o serviço da API a partir deste repositório (plano gratuito).
+# Os valores marcados com `sync: false` são pedidos na tela do Render e NUNCA ficam no Git.
+services:
+  - type: web
+    name: homegrocery-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /saude
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # URL do PostgreSQL (Neon), por exemplo: postgresql://usuario:senha@host/banco?sslmode=require
+      - key: ConnectionStrings__Padrao
+        sync: false
+      # Chave que assina os tokens de login. O Render gera uma aleatória forte na primeira criação.
+      - key: Jwt__ChaveSecreta
+        generateValue: true
+      # Endereço do app (Vercel) que pode chamar a API, sem barra no final. Ex.: https://homegrocery.vercel.app
+      - key: Cors__OrigensPermitidas__0
+        sync: false
