@@ -1,0 +1,251 @@
+using System.Text.Json;
+
+namespace HomeGroceryApi.Tests.Integracao;
+
+[Collection("api")]
+public class MapasEComprasDivididasTests
+{
+    private readonly ApiFactory _api;
+
+    public MapasEComprasDivididasTests(ApiFactory api)
+    {
+        _api = api;
+    }
+
+    private static object Area(int x, int y, int largura, int altura) => new { x, y, largura, altura };
+
+    private static object Secao(string nome, object area, Guid[]? ladoA = null, Guid[]? ladoB = null, string? nomeLadoB = null, bool dividida = false)
+    {
+        return new { nome, nomeLadoB, dividida, area, categoriasLadoA = ladoA ?? [], categoriasLadoB = ladoB ?? [] };
+    }
+
+    private static object Mapa(string nome, int versao, params object[] secoes)
+    {
+        return new { nome, largura = 30, altura = 20, entrada = new { x = 2, y = 18 }, caixas = Area(24, 17, 5, 2), secoes, versao };
+    }
+
+    private static async Task<JsonElement> NovaLojaAsync(UsuarioDeTeste u, string nome)
+    {
+        var (status, loja) = await u.PostAsync("/lojas", new { nome });
+        Assert.Equal(201, status);
+        return loja;
+    }
+
+    private static async Task<Guid> NovaListaAsync(UsuarioDeTeste u)
+    {
+        var (_, lista) = await u.PostAsync("/listas", new { competencia = "2026-11", origem = "Zero" });
+        return lista.GetProperty("resumo").GetProperty("id").GetGuid();
+    }
+
+    private static async Task<Guid> NovoItemAsync(UsuarioDeTeste u, Guid lista, string nome, string categoria)
+    {
+        var (_, item) = await u.PostAsync($"/listas/{lista}/itens", new { nome, categoriaId = await u.CategoriaAsync(categoria), unidade = "Unidade", quantidade = 1 });
+        return item.GetProperty("id").GetGuid();
+    }
+
+    /// <summary>Mercado com Mercearia e Limpeza (lados diferentes de uma gôndola dividida) e Açougue numa seção simples.</summary>
+    private static async Task<Guid> LojaMapeadaAsync(UsuarioDeTeste u, string nome)
+    {
+        var loja = await NovaLojaAsync(u, nome);
+        var mercearia = await u.CategoriaAsync("Mercearia");
+        var limpeza = await u.CategoriaAsync("Limpeza");
+        var acougue = await u.CategoriaAsync("Açougue");
+        var (status, salvo) = await u.PutAsync($"/lojas/{loja.GetProperty("id").GetGuid()}/mapa", Mapa(nome, loja.GetProperty("versao").GetInt32(),
+            Secao("Mercearia", Area(8, 8, 10, 2), [mercearia], [limpeza], "Limpeza", dividida: true),
+            Secao("Açougue", Area(3, 3, 8, 2), [acougue])));
+        Assert.Equal(200, status);
+        return salvo.GetProperty("id").GetGuid();
+    }
+
+    [PostgresFact]
+    public async Task Cria_mercado_em_branco_e_salva_o_mapa_com_as_categorias_de_cada_lado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var lojaId = await LojaMapeadaAsync(u, "Mercado Central");
+
+        var (status, loja) = await u.GetAsync($"/lojas/{lojaId}");
+
+        Assert.Equal(200, status);
+        Assert.Equal(2, loja.GetProperty("versao").GetInt32());
+        var gondola = loja.GetProperty("secoes").EnumerateArray().First(s => s.GetProperty("dividida").GetBoolean());
+        Assert.Equal("Limpeza", gondola.GetProperty("nomeLadoB").GetString());
+        Assert.Equal(await u.CategoriaAsync("Mercearia"), gondola.GetProperty("categoriasLadoA")[0].GetGuid());
+        Assert.Equal(await u.CategoriaAsync("Limpeza"), gondola.GetProperty("categoriasLadoB")[0].GetGuid());
+        Assert.Equal(1, (await u.GetAsync("/lojas")).Corpo.GetArrayLength());
+    }
+
+    [PostgresFact]
+    public async Task Mapa_com_secoes_sobrepostas_ou_fora_da_grade_e_recusado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var loja = await NovaLojaAsync(u, "Teste");
+        var id = loja.GetProperty("id").GetGuid();
+
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("A", Area(5, 5, 6, 2)), Secao("B", Area(8, 5, 6, 2))))).Status);
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("A", Area(28, 5, 6, 2))))).Status);
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("Em cima dos caixas", Area(25, 17, 2, 2))))).Status);
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("Fina", Area(5, 5, 8, 1), nomeLadoB: "B", dividida: true)))).Status);
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("Categoria falsa", Area(5, 5, 6, 2), [Guid.NewGuid()])))).Status);
+    }
+
+    [PostgresFact]
+    public async Task Salvar_mapa_com_versao_velha_da_conflito()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var loja = await NovaLojaAsync(u, "Teste");
+        var id = loja.GetProperty("id").GetGuid();
+        Assert.Equal(200, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("A", Area(5, 5, 6, 2))))).Status);
+
+        Assert.Equal(409, (await u.PutAsync($"/lojas/{id}/mapa", Mapa("Teste", 1, Secao("A", Area(5, 5, 6, 2))))).Status);
+    }
+
+    [PostgresFact]
+    public async Task Mercado_de_outro_grupo_nao_e_visivel_nem_editavel()
+    {
+        var dona = await _api.NovoUsuarioAsync();
+        var intruso = await _api.NovoUsuarioAsync();
+        var lojaId = await LojaMapeadaAsync(dona, "Particular");
+
+        Assert.Equal(404, (await intruso.GetAsync($"/lojas/{lojaId}")).Status);
+        Assert.Equal(404, (await intruso.PutAsync($"/lojas/{lojaId}/mapa", Mapa("X", 2))).Status);
+        Assert.Equal(404, (await intruso.DeleteAsync($"/lojas/{lojaId}")).Status);
+        Assert.Equal(0, (await intruso.GetAsync("/lojas")).Corpo.GetArrayLength());
+    }
+
+    [PostgresFact]
+    public async Task Copiar_mercado_leva_o_layout_com_ids_novos()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var origem = await LojaMapeadaAsync(u, "Original");
+
+        var (status, copia) = await u.PostAsync("/lojas", new { nome = "Copia", copiarDeLojaId = origem });
+
+        Assert.Equal(201, status);
+        Assert.Equal(2, copia.GetProperty("secoes").GetArrayLength());
+        Assert.NotEqual(origem, copia.GetProperty("id").GetGuid());
+        Assert.Equal(409, (await u.PostAsync("/lojas", new { nome = "copia" })).Status);
+    }
+
+    [PostgresFact]
+    public async Task Compra_dividida_a_rota_do_segundo_mercado_so_tem_o_que_falta()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercadoA = await LojaMapeadaAsync(u, "Mercado A");
+        var mercadoB = await LojaMapeadaAsync(u, "Mercado B");
+        var lista = await NovaListaAsync(u);
+        var arroz = await NovoItemAsync(u, lista, "Arroz", "Mercearia");
+        await NovoItemAsync(u, lista, "Detergente", "Limpeza");
+        await NovoItemAsync(u, lista, "Frango", "Açougue");
+
+        var (statusMarca, marcado) = await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercadoA });
+        var (statusRota, rota) = await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercadoB });
+
+        Assert.Equal(200, statusMarca);
+        Assert.Equal(mercadoA, marcado.GetProperty("compradoNaLojaId").GetGuid());
+        Assert.Equal(200, statusRota);
+        var nomes = rota.GetProperty("paradas").EnumerateArray().SelectMany(p => p.GetProperty("itens").EnumerateArray()).Select(i => i.GetProperty("nome").GetString()).ToArray();
+        Assert.Equivalent(new[] { "Detergente", "Frango" }, nomes);
+        Assert.Equal(1, rota.GetProperty("jaCompradosEmOutrosMercados").GetInt32());
+        Assert.True(rota.GetProperty("distanciaEmMetros").GetInt32() > 0);
+    }
+
+    [PostgresFact]
+    public async Task Item_do_lado_B_da_gondola_vem_com_o_texto_do_lado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercado = await LojaMapeadaAsync(u, "Mercado A");
+        var lista = await NovaListaAsync(u);
+        await NovoItemAsync(u, lista, "Detergente", "Limpeza");
+
+        var (_, rota) = await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado });
+
+        var parada = rota.GetProperty("paradas")[0];
+        Assert.Equal("Limpeza", parada.GetProperty("nome").GetString());
+        Assert.Equal("B", parada.GetProperty("lado").GetString());
+        Assert.Equal("lado de baixo", parada.GetProperty("ladoTexto").GetString());
+    }
+
+    [PostgresFact]
+    public async Task Nao_tem_aqui_tira_o_item_da_rota_do_mercado_mas_ele_continua_pendente()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercadoA = await LojaMapeadaAsync(u, "Mercado A");
+        var mercadoB = await LojaMapeadaAsync(u, "Mercado B");
+        var lista = await NovaListaAsync(u);
+        var frango = await NovoItemAsync(u, lista, "Frango", "Açougue");
+
+        var (status, item) = await u.PutAsync($"/listas/{lista}/itens/{frango}/sem-na-loja", new { lojaId = mercadoA, sem = true });
+        var (_, rotaA) = await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercadoA });
+        var (_, rotaB) = await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercadoB });
+
+        Assert.Equal(200, status);
+        Assert.False(item.GetProperty("comprado").GetBoolean());
+        Assert.Equal(0, rotaA.GetProperty("paradas").GetArrayLength());
+        Assert.Equal("NaoTemNaLoja", rotaA.GetProperty("foraDaRota")[0].GetProperty("motivo").GetString());
+        Assert.Equal(1, rotaB.GetProperty("paradas").GetArrayLength());
+
+        await u.PutAsync($"/listas/{lista}/itens/{frango}/sem-na-loja", new { lojaId = mercadoA, sem = false });
+        Assert.Equal(1, (await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercadoA })).Corpo.GetProperty("paradas").GetArrayLength());
+    }
+
+    [PostgresFact]
+    public async Task Categoria_sem_secao_no_mercado_fica_fora_da_rota_e_pendente()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercado = await LojaMapeadaAsync(u, "Mercado A");
+        var lista = await NovaListaAsync(u);
+        await NovoItemAsync(u, lista, "Pão", "Padaria");
+
+        var (_, rota) = await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado });
+
+        Assert.Equal(0, rota.GetProperty("paradas").GetArrayLength());
+        Assert.Equal("SemSecao", rota.GetProperty("foraDaRota")[0].GetProperty("motivo").GetString());
+    }
+
+    [PostgresFact]
+    public async Task Desmarcar_item_limpa_o_mercado_da_compra()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercado = await LojaMapeadaAsync(u, "Mercado A");
+        var lista = await NovaListaAsync(u);
+        var arroz = await NovoItemAsync(u, lista, "Arroz", "Mercearia");
+        await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercado });
+
+        var (_, desmarcado) = await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = false });
+
+        Assert.False(desmarcado.GetProperty("comprado").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, desmarcado.GetProperty("compradoNaLojaId").ValueKind);
+    }
+
+    [PostgresFact]
+    public async Task Marcar_comprado_exige_mercado_do_proprio_grupo()
+    {
+        var dona = await _api.NovoUsuarioAsync();
+        var outra = await _api.NovoUsuarioAsync();
+        var lojaDeOutra = await LojaMapeadaAsync(outra, "De outra");
+        var lista = await NovaListaAsync(dona);
+        var arroz = await NovoItemAsync(dona, lista, "Arroz", "Mercearia");
+
+        Assert.Equal(400, (await dona.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = lojaDeOutra })).Status);
+        Assert.Equal(400, (await dona.PutAsync($"/listas/{lista}/itens/{arroz}/sem-na-loja", new { lojaId = lojaDeOutra, sem = true })).Status);
+        Assert.Equal(404, (await dona.PostAsync($"/listas/{lista}/rota", new { lojaId = lojaDeOutra })).Status);
+    }
+
+    [PostgresFact]
+    public async Task Excluir_mercado_preserva_onde_os_itens_antigos_foram_comprados()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercado = await LojaMapeadaAsync(u, "Mercado A");
+        var lista = await NovaListaAsync(u);
+        var arroz = await NovoItemAsync(u, lista, "Arroz", "Mercearia");
+        await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercado });
+
+        Assert.Equal(204, (await u.DeleteAsync($"/lojas/{mercado}")).Status);
+
+        Assert.Equal(0, (await u.GetAsync("/lojas")).Corpo.GetArrayLength());
+        Assert.Equal(404, (await u.GetAsync($"/lojas/{mercado}")).Status);
+        var (_, depois) = await u.GetAsync($"/listas/{lista}");
+        Assert.Equal(mercado, depois.GetProperty("itens")[0].GetProperty("compradoNaLojaId").GetGuid());
+        Assert.Equal(400, (await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercado })).Status);
+    }
+}

@@ -166,6 +166,15 @@ public sealed class UnidadeDeTrabalho : IUnidadeDeTrabalho
         }).Where(g => g.HasValue).Select(g => g!.Value).Distinct();
         foreach (var grupoId in gruposDoCatalogo) avisos.Add(new Aviso(grupoId, null, new EventoDeAlteracao(EventoDeAlteracao.Catalogo)));
 
+        // Mercados e mapas: o desenho de um mercado mudou (um aviso por grupo, mesmo que muitas seções tenham sido regravadas).
+        var gruposDosMapas = mudancas.Select(e => e.Entity).Select(e => e switch
+        {
+            Loja l => (Guid?)l.GrupoId,
+            Secao s => s.GrupoId,
+            _ => null,
+        }).Where(g => g.HasValue).Select(g => g!.Value).Distinct();
+        foreach (var grupoId in gruposDosMapas) avisos.Add(new Aviso(grupoId, null, new EventoDeAlteracao(EventoDeAlteracao.Lojas)));
+
         // Membros e nome do grupo: avisa o grupo e a própria pessoa (que pode estar em outro aparelho).
         foreach (var membro in mudancas.Select(e => e.Entity).OfType<MembroDoGrupo>())
         {

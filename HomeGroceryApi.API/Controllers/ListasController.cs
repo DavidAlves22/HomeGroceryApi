@@ -1,5 +1,6 @@
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.UseCases.Listas;
+using HomeGroceryApi.Application.UseCases.Rotas;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -70,5 +71,18 @@ public sealed class ListasController : ControllerBase
     public async Task<ActionResult<ItemDaListaResposta>> MarcarComprado(Guid id, Guid itemId, [FromBody] MarcarCompradoRequisicao requisicao, [FromServices] MarcarItemComprado casoDeUso, CancellationToken ct)
     {
         return Ok(await casoDeUso.ExecutarAsync(id, itemId, requisicao, ct));
+    }
+
+    [HttpPut("{id:guid}/itens/{itemId:guid}/sem-na-loja")]
+    public async Task<ActionResult<ItemDaListaResposta>> MarcarSemNaLoja(Guid id, Guid itemId, [FromBody] SemNaLojaRequisicao requisicao, [FromServices] MarcarItemSemNaLoja casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, itemId, requisicao, ct));
+    }
+
+    /// <summary>Rota dentro de um mercado, só com os itens que ainda faltam. É POST porque leva a posição atual no corpo.</summary>
+    [HttpPost("{id:guid}/rota")]
+    public async Task<ActionResult<RotaResposta>> PlanejarRota(Guid id, [FromBody] RotaRequisicao requisicao, [FromServices] PlanejarRotaDaLista casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
     }
 }

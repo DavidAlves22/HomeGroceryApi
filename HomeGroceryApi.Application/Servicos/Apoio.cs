@@ -99,7 +99,26 @@ public static class Mapeamentos
         return new ItemDaListaResposta(
             i.Id, i.ProdutoId, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot, i.QuantidadePlanejada, i.QuantidadeComprada,
             i.PrecoEstimado, i.PrecoUnitario, i.PrecoReferencia, CalculoDeTotais.TotalEstimadoDoItem(i), CalculoDeTotais.TotalRealizadoDoItem(i),
-            i.Comprado, i.CompradoEm, i.CompradoPorUsuarioId, i.AdicionadoPorUsuarioId, i.Ordem, i.Versao);
+            i.Comprado, i.CompradoEm, i.CompradoPorUsuarioId, i.AdicionadoPorUsuarioId, i.Ordem, i.Versao, i.CompradoNaLojaId, i.LojasSemOItem);
+    }
+
+    public static PontoDto ParaDto(this PontoDoMapa p) => new(p.X, p.Y);
+
+    public static AreaDto ParaDto(this AreaDoMapa a) => new(a.X, a.Y, a.Largura, a.Altura);
+
+    public static AreaDoMapa ParaArea(this AreaDto a) => new(a.X, a.Y, a.Largura, a.Altura);
+
+    public static LojaResumoResposta ParaResumo(this Loja l, int secoes) => new(l.Id, l.Nome, l.Largura, l.Altura, secoes, l.Versao);
+
+    public static LojaResposta ParaResposta(this Loja loja, IReadOnlyList<Secao> secoes, IReadOnlyList<SecaoCategoria> vinculos)
+    {
+        var respostas = secoes
+            .Select(s => new SecaoResposta(
+                s.Id, s.Nome, s.NomeLadoB, s.Dividida, s.Area.ParaDto(),
+                vinculos.Where(v => v.SecaoId == s.Id && v.Lado == LadoDaSecaoEnum.A).Select(v => v.CategoriaId).ToList(),
+                vinculos.Where(v => v.SecaoId == s.Id && v.Lado == LadoDaSecaoEnum.B).Select(v => v.CategoriaId).ToList()))
+            .ToList();
+        return new LojaResposta(loja.Id, loja.Nome, loja.Largura, loja.Altura, loja.Entrada.ParaDto(), loja.Caixas.ParaDto(), respostas, loja.Versao);
     }
 
     public static ListaResumoResposta ParaResposta(this ResumoDeLista r)

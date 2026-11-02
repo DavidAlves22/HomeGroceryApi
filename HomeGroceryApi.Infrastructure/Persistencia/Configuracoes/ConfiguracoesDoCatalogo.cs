@@ -71,6 +71,8 @@ public sealed class ItemDaListaConfiguracao : IEntityTypeConfiguration<ItemDaLis
         builder.Property(i => i.PrecoEstimado).HasPrecision(12, 2);
         builder.Property(i => i.PrecoUnitario).HasPrecision(12, 2);
         builder.Property(i => i.PrecoReferencia).HasPrecision(12, 2);
+        builder.Property(i => i.LojasSemOItem).HasColumnType("uuid[]").IsRequired();
+        builder.HasOne<Loja>().WithMany().HasForeignKey(i => i.CompradoNaLojaId).OnDelete(DeleteBehavior.Restrict);
 
         // ProdutoId e CategoriaId são só referências informativas (sem FK): o histórico vive do snapshot.
         builder.Property(i => i.Versao).IsConcurrencyToken();

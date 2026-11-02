@@ -245,11 +245,13 @@ public sealed class RemoverItemDaLista : CasoDeUsoDeLista
 
 public sealed class MarcarItemComprado : CasoDeUsoDeLista
 {
+    private readonly ILojaRepository _lojas;
     private readonly IUnidadeDeTrabalho _unidade;
     private readonly IRelogio _relogio;
 
-    public MarcarItemComprado(IListaRepository listas, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario, IRelogio relogio) : base(listas, usuario)
+    public MarcarItemComprado(IListaRepository listas, ILojaRepository lojas, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario, IRelogio relogio) : base(listas, usuario)
     {
+        _lojas = lojas;
         _unidade = unidade;
         _relogio = relogio;
     }
@@ -260,7 +262,41 @@ public sealed class MarcarItemComprado : CasoDeUsoDeLista
         lista.GarantirEditavel();
         var item = await ObterItemAsync(listaId, itemId, ct);
 
-        item.DefinirComprado(requisicao.Comprado, Usuario.UsuarioId, _relogio.AgoraUtc);
+        // O mercado da compra tem de ser um mercado ativo do próprio grupo.
+        if (requisicao.Comprado && requisicao.LojaId is { } lojaId)
+        {
+            var loja = await _lojas.ObterAsync(Usuario.GrupoId, lojaId, ct);
+            if (loja is null || loja.ExcluidoEm is not null) throw new ErroDeValidacao("Escolha um mercado válido.");
+        }
+
+        item.DefinirComprado(requisicao.Comprado, Usuario.UsuarioId, _relogio.AgoraUtc, requisicao.LojaId);
+        await _unidade.SalvarAsync(ct);
+        return item.ParaResposta();
+    }
+}
+
+/// <summary>"Não tem aqui": o item continua pendente, mas some da rota deste mercado e aparece na do próximo.</summary>
+public sealed class MarcarItemSemNaLoja : CasoDeUsoDeLista
+{
+    private readonly ILojaRepository _lojas;
+    private readonly IUnidadeDeTrabalho _unidade;
+
+    public MarcarItemSemNaLoja(IListaRepository listas, ILojaRepository lojas, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario) : base(listas, usuario)
+    {
+        _lojas = lojas;
+        _unidade = unidade;
+    }
+
+    public async Task<ItemDaListaResposta> ExecutarAsync(Guid listaId, Guid itemId, SemNaLojaRequisicao requisicao, CancellationToken ct)
+    {
+        var lista = await ObterListaAsync(listaId, ct);
+        lista.GarantirEditavel();
+        var item = await ObterItemAsync(listaId, itemId, ct);
+
+        var loja = await _lojas.ObterAsync(Usuario.GrupoId, requisicao.LojaId, ct);
+        if (loja is null || loja.ExcluidoEm is not null) throw new ErroDeValidacao("Escolha um mercado válido.");
+
+        item.DefinirSemNaLoja(loja.Id, requisicao.Sem);
         await _unidade.SalvarAsync(ct);
         return item.ParaResposta();
     }

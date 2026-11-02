@@ -33,6 +33,13 @@ public sealed class ItemDaLista
     public decimal? PrecoReferencia { get; private set; }
 
     public bool Comprado { get; private set; }
+
+    /// <summary>Mercado onde foi comprado. A compra do mês pode ser dividida entre vários mercados.</summary>
+    public Guid? CompradoNaLojaId { get; private set; }
+
+    /// <summary>Mercados que não têm este item ("Não tem aqui"). Ele continua pendente e entra na rota do próximo mercado.</summary>
+    public Guid[] LojasSemOItem { get; private set; } = [];
+
     public DateTime? CompradoEm { get; private set; }
     public Guid? CompradoPorUsuarioId { get; private set; }
     public Guid AdicionadoPorUsuarioId { get; private set; }
@@ -76,12 +83,33 @@ public sealed class ItemDaLista
     /// Marcar/desmarcar é idempotente (repetir o mesmo comando dá o mesmo resultado) e não exige versão:
     /// quem marcou por último vale, e o app mostra quem foi.
     /// </summary>
-    public void DefinirComprado(bool comprado, Guid usuarioId, DateTime agora)
+    public void DefinirComprado(bool comprado, Guid usuarioId, DateTime agora, Guid? lojaId = null)
     {
-        if (Comprado == comprado) return;
+        if (Comprado == comprado)
+        {
+            // Já comprado: só muda se agora se informou OUTRO mercado (corrigir onde foi comprado).
+            if (comprado && lojaId is not null && CompradoNaLojaId != lojaId)
+            {
+                CompradoNaLojaId = lojaId;
+                Versao++;
+            }
+
+            return;
+        }
+
         Comprado = comprado;
         CompradoEm = comprado ? agora : null;
         CompradoPorUsuarioId = comprado ? usuarioId : null;
+        CompradoNaLojaId = comprado ? lojaId : null;
+        Versao++;
+    }
+
+    public void DefinirSemNaLoja(Guid lojaId, bool sem)
+    {
+        if (LojasSemOItem.Contains(lojaId) == sem) return;
+
+        // Troca o array inteiro (em vez de alterar o existente) para o EF perceber a mudança.
+        LojasSemOItem = sem ? [.. LojasSemOItem, lojaId] : LojasSemOItem.Where(l => l != lojaId).ToArray();
         Versao++;
     }
 }

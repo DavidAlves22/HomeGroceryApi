@@ -16,7 +16,10 @@ public sealed record EditarItemDaListaRequisicao(
     decimal? PrecoEstimado = null,
     decimal? PrecoUnitario = null);
 
-public sealed record MarcarCompradoRequisicao(bool Comprado);
+/// <summary>LojaId é o mercado onde foi comprado (compra dividida entre mercados). Vazio é aceito: o item fica sem mercado.</summary>
+public sealed record MarcarCompradoRequisicao(bool Comprado, Guid? LojaId = null);
+
+public sealed record SemNaLojaRequisicao(Guid LojaId, bool Sem);
 
 public sealed record ItemDaListaResposta(
     Guid Id,
@@ -37,7 +40,9 @@ public sealed record ItemDaListaResposta(
     Guid? CompradoPorUsuarioId,
     Guid AdicionadoPorUsuarioId,
     int Ordem,
-    int Versao);
+    int Versao,
+    Guid? CompradoNaLojaId,
+    IReadOnlyList<Guid> SemNasLojas);
 
 public sealed record ListaResumoResposta(
     Guid Id,

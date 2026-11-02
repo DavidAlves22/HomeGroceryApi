@@ -68,6 +68,16 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - **Conflitos entre pessoas:** marcar/desmarcar é idempotente (vale a última); editar exige a versão do item (409 se outra pessoa mudou antes).
 - Índice de vínculo ativo NÃO é único: o EF insere o novo antes de desativar o antigo.
 
+## Fase 5 (mercados, mapas e rota) — decisões
+- **N mercados por grupo** (`Loja`), cada um com mapa em grade (`Largura` x `Altura` células, ~1,5 m cada), entrada e caixas. Exclusão lógica: itens antigos guardam `CompradoNaLojaId`.
+- **Mapa salvo por inteiro** (`PUT /lojas/{id}/mapa`): seções antigas saem, novas entram com ids novos (a resposta traz as ids). `Versao` da loja evita sobrescrita entre duas pessoas (409). Validação em `ValidadorDoMapa` (dentro da grade, sem sobreposição, gôndola dupla com 2+ células de espessura).
+- **Gôndola de dois lados**: `Secao.Dividida` + `SecaoCategoria.Lado` (A = cima/esquerda, B = baixo/direita). A parada fica só no corredor do lado do item (+ pontas da metade).
+- **Categoria em vários lugares**: NÃO há unicidade por loja+categoria; só não repete no mesmo lado da mesma seção. A rota vai ao lugar mais próximo.
+- **Compra dividida**: `ItemDaLista.CompradoNaLojaId` (enviado em `PUT .../comprado` com `lojaId`) e `LojasSemOItem` ("Não tem aqui", `PUT .../sem-na-loja`; continua pendente). Desmarcar limpa o mercado.
+- **Rota** (`POST /listas/{id}/rota` com `lojaId` e posição opcional): só itens NÃO comprados e que não estão em `LojasSemOItem` desse mercado. Sem seção para a categoria → `foraDaRota` ("SemSecao"); marcados "Não tem aqui" → "NaoTemNaLoja". Algoritmo em `Domain/Servicos/PlanejadorDeRota` (Dijkstra 8 direções, sem cortar quina, vizinho mais próximo); a economia compara com seguir a ordem das categorias. Sem GPS: a posição vem do app (último item marcado).
+- Tempo real: mudança em loja/seção avisa o grupo com o evento `lojas`.
+- `LojasSemOItem` é `uuid[]`: o domínio troca o array inteiro para o EF perceber a mudança.
+
 ## Publicação
 - Guia completo em `docs/PUBLICACAO.md` (Neon + Render + Vercel). `render.yaml` é o blueprint do Render; `vercel.json` (repo do app) define build/saída/headers.
 - `StringDeConexao.Normalizar` aceita a URL `postgresql://...` do Neon.

@@ -8,6 +8,7 @@ public sealed record EventoDeAlteracao(string Tipo, Guid? ListaId = null, Guid? 
 {
     public const string Lista = "lista";
     public const string Catalogo = "catalogo";
+    public const string Lojas = "lojas";
     public const string Membros = "membros";
     public const string GrupoAlterado = "grupoAlterado";
 }
