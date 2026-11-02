@@ -66,12 +66,12 @@ public class RegrasDoDominioTests
     {
         var lista = ListaDeCompras.Criar(Guid.NewGuid(), Guid.NewGuid(), "2026-11", "Novembro", true, Guid.NewGuid(), Agora);
 
-        lista.Finalizar(Agora);
+        lista.Finalizar(Agora, 0m);
 
         Assert.True(lista.Finalizada);
         Assert.Equal(Agora, lista.FinalizadaEm);
         Assert.Throws<ErroDeDominio>(() => lista.GarantirEditavel());
-        Assert.Throws<ErroDeDominio>(() => lista.Finalizar(Agora));
+        Assert.Throws<ErroDeDominio>(() => lista.Finalizar(Agora, 0m));
 
         lista.Reabrir();
         lista.GarantirEditavel();
@@ -105,7 +105,7 @@ public class RegrasDoDominioTests
         var item = ItemDaLista.Criar(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, "Arroz", null, "Mercearia", UnidadeDeMedidaEnum.Pacote, 2, 0, Guid.NewGuid());
         var categoria = Guid.NewGuid();
 
-        item.Editar(Guid.NewGuid(), "Arroz integral", categoria, "Grãos", UnidadeDeMedidaEnum.Kg, 5);
+        item.Editar(Guid.NewGuid(), "Arroz integral", categoria, "Grãos", UnidadeDeMedidaEnum.Kg, 5, null, null, null);
 
         Assert.Equal("Arroz integral", item.NomeSnapshot);
         Assert.Equal("Grãos", item.CategoriaNomeSnapshot);

@@ -4,9 +4,17 @@ namespace HomeGroceryApi.Application.Dtos;
 
 public sealed record CriarListaRequisicao(string Competencia, string? Nome, OrigemDaListaEnum Origem, IReadOnlyList<Guid>? ItensDoModeloIds, bool PermitirDuplicada);
 
-public sealed record ItemDaListaRequisicao(string Nome, Guid CategoriaId, UnidadeDeMedidaEnum Unidade, decimal Quantidade);
+public sealed record ItemDaListaRequisicao(string Nome, Guid CategoriaId, UnidadeDeMedidaEnum Unidade, decimal Quantidade, decimal? PrecoEstimado = null);
 
-public sealed record EditarItemDaListaRequisicao(string Nome, Guid CategoriaId, UnidadeDeMedidaEnum Unidade, decimal Quantidade, int Versao);
+public sealed record EditarItemDaListaRequisicao(
+    string Nome,
+    Guid CategoriaId,
+    UnidadeDeMedidaEnum Unidade,
+    decimal Quantidade,
+    int Versao,
+    decimal? QuantidadeComprada = null,
+    decimal? PrecoEstimado = null,
+    decimal? PrecoUnitario = null);
 
 public sealed record MarcarCompradoRequisicao(bool Comprado);
 
@@ -17,6 +25,11 @@ public sealed record ItemDaListaResposta(
     string CategoriaNome,
     UnidadeDeMedidaEnum Unidade,
     decimal Quantidade,
+    decimal? QuantidadeComprada,
+    decimal? PrecoEstimado,
+    decimal? PrecoUnitario,
+    decimal TotalEstimado,
+    decimal TotalRealizado,
     bool Comprado,
     DateTime? CompradoEm,
     Guid? CompradoPorUsuarioId,
@@ -34,6 +47,12 @@ public sealed record ListaResumoResposta(
     DateTime? FinalizadaEm,
     int TotalDeItens,
     int Comprados,
-    int Percentual);
+    int Percentual,
+    decimal TotalEstimado,
+    decimal TotalRealizado);
 
-public sealed record ListaResposta(ListaResumoResposta Resumo, IReadOnlyList<ItemDaListaResposta> Itens);
+public sealed record TotaisPorCategoriaResposta(string Categoria, decimal Estimado, decimal Realizado, int Itens, int Comprados);
+
+public sealed record TotaisResposta(decimal Estimado, decimal Realizado, decimal Restante, int Itens, int Comprados, int CompradosSemPreco, IReadOnlyList<TotaisPorCategoriaResposta> PorCategoria);
+
+public sealed record ListaResposta(ListaResumoResposta Resumo, IReadOnlyList<ItemDaListaResposta> Itens, TotaisResposta Totais);

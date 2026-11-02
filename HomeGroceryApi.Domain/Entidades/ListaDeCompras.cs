@@ -19,6 +19,9 @@ public sealed class ListaDeCompras
     public Guid CriadoPorUsuarioId { get; private set; }
     public DateTime? FinalizadaEm { get; private set; }
 
+    /// <summary>Total efetivamente gasto, congelado no momento em que a compra é finalizada.</summary>
+    public decimal? TotalGastoFinal { get; private set; }
+
     private ListaDeCompras()
     {
     }
@@ -35,11 +38,12 @@ public sealed class ListaDeCompras
         if (Finalizada) throw new ErroDeDominio("Esta lista já foi finalizada. Reabra a lista para alterá-la.");
     }
 
-    public void Finalizar(DateTime agora)
+    public void Finalizar(DateTime agora, decimal totalGasto)
     {
         GarantirEditavel();
         Status = StatusDaListaEnum.Finalizada;
         FinalizadaEm = agora;
+        TotalGastoFinal = totalGasto;
     }
 
     public void Reabrir()
@@ -47,5 +51,6 @@ public sealed class ListaDeCompras
         if (!Finalizada) throw new ErroDeDominio("A lista já está em andamento.");
         Status = StatusDaListaEnum.EmAndamento;
         FinalizadaEm = null;
+        TotalGastoFinal = null;
     }
 }

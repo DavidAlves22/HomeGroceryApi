@@ -111,8 +111,20 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
 
+                    b.Property<decimal?>("PrecoEstimado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal?>("PrecoUnitario")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
                     b.Property<Guid?>("ProdutoId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("QuantidadeComprada")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
 
                     b.Property<decimal>("QuantidadePlanejada")
                         .HasPrecision(12, 3)
@@ -212,6 +224,10 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<decimal?>("TotalGastoFinal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
 
                     b.HasKey("Id");
 

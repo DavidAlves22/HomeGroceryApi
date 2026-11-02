@@ -47,6 +47,7 @@ public sealed class ListaDeComprasConfiguracao : IEntityTypeConfiguration<ListaD
         builder.Property(l => l.Competencia).HasMaxLength(7).IsRequired();
         builder.Property(l => l.Nome).HasMaxLength(120).IsRequired();
         builder.Property(l => l.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(l => l.TotalGastoFinal).HasPrecision(12, 2);
         builder.HasOne<Grupo>().WithMany().HasForeignKey(l => l.GrupoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(l => new { l.GrupoId, l.Competencia });
 
@@ -66,6 +67,9 @@ public sealed class ItemDaListaConfiguracao : IEntityTypeConfiguration<ItemDaLis
         builder.Property(i => i.CategoriaNomeSnapshot).HasMaxLength(120).IsRequired();
         builder.Property(i => i.UnidadeSnapshot).HasConversion<string>().HasMaxLength(20);
         builder.Property(i => i.QuantidadePlanejada).HasPrecision(12, 3);
+        builder.Property(i => i.QuantidadeComprada).HasPrecision(12, 3);
+        builder.Property(i => i.PrecoEstimado).HasPrecision(12, 2);
+        builder.Property(i => i.PrecoUnitario).HasPrecision(12, 2);
 
         // ProdutoId e CategoriaId são só referências informativas (sem FK): o histórico vive do snapshot.
         builder.Property(i => i.Versao).IsConcurrencyToken();

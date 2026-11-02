@@ -1,5 +1,6 @@
 using HomeGroceryApi.Domain.Entidades;
 using HomeGroceryApi.Domain.Interfaces;
+using HomeGroceryApi.Domain.Servicos;
 using HomeGroceryApi.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 
@@ -120,15 +121,20 @@ public sealed class ListaRepository : IListaRepository
         _contexto = contexto;
     }
 
-    public Task<List<ResumoDeLista>> ListarResumosAsync(Guid grupoId, CancellationToken ct)
+    public Task<List<ListaDeCompras>> ListarAsync(Guid grupoId, CancellationToken ct)
     {
-        return _contexto.Listas
-            .Where(l => l.GrupoId == grupoId)
-            .Select(l => new ResumoDeLista(
-                l.Id, l.Competencia, l.Nome, l.Principal, l.Status, l.FinalizadaEm,
-                _contexto.ItensDasListas.Count(i => i.ListaId == l.Id),
-                _contexto.ItensDasListas.Count(i => i.ListaId == l.Id && i.Comprado)))
-            .ToListAsync(ct);
+        return _contexto.Listas.AsNoTracking().Where(l => l.GrupoId == grupoId).ToListAsync(ct);
+    }
+
+    public async Task<List<ItemComCompetencia>> ListarItensComCompetenciaAsync(Guid grupoId, CancellationToken ct)
+    {
+        var linhas = await (
+            from item in _contexto.ItensDasListas.AsNoTracking()
+            join lista in _contexto.Listas.AsNoTracking() on item.ListaId equals lista.Id
+            where lista.GrupoId == grupoId && item.GrupoId == grupoId
+            select new { lista.Competencia, Item = item }).ToListAsync(ct);
+
+        return linhas.Select(l => new ItemComCompetencia(l.Competencia, l.Item)).ToList();
     }
 
     public Task<ListaDeCompras?> ObterAsync(Guid grupoId, Guid id, CancellationToken ct)

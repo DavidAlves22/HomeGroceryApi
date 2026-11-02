@@ -1,9 +1,10 @@
 using HomeGroceryApi.Domain.Entidades;
 using HomeGroceryApi.Domain.Enums;
+using HomeGroceryApi.Domain.Servicos;
 
 namespace HomeGroceryApi.Domain.Interfaces;
 
-public sealed record ResumoDeLista(Guid Id, string Competencia, string Nome, bool Principal, StatusDaListaEnum Status, DateTime? FinalizadaEm, int TotalDeItens, int Comprados);
+public sealed record ResumoDeLista(Guid Id, string Competencia, string Nome, bool Principal, StatusDaListaEnum Status, DateTime? FinalizadaEm, int TotalDeItens, int Comprados, decimal TotalEstimado, decimal TotalRealizado);
 
 public interface ICategoriaRepository
 {
@@ -32,7 +33,11 @@ public interface IModeloRepository
 
 public interface IListaRepository
 {
-    Task<List<ResumoDeLista>> ListarResumosAsync(Guid grupoId, CancellationToken ct);
+    Task<List<ListaDeCompras>> ListarAsync(Guid grupoId, CancellationToken ct);
+
+    /// <summary>Todos os itens de todas as listas do grupo, com o mês de cada um (base de resumos e análises).</summary>
+    Task<List<ItemComCompetencia>> ListarItensComCompetenciaAsync(Guid grupoId, CancellationToken ct);
+
     Task<ListaDeCompras?> ObterAsync(Guid grupoId, Guid id, CancellationToken ct);
     Task<bool> ExistePrincipalAsync(Guid grupoId, string competencia, CancellationToken ct);
     Task AdicionarAsync(ListaDeCompras lista, IEnumerable<ItemDaLista> itens, CancellationToken ct);

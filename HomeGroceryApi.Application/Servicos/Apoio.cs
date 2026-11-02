@@ -17,6 +17,7 @@ public static class Entrada
 {
     public const int TamanhoMaximoDoNome = 120;
     public const decimal QuantidadeMaxima = 999999.999m;
+    public const decimal PrecoMaximo = 999999.99m;
 
     public static string Nome(string? texto, string rotulo = "O nome")
     {
@@ -31,6 +32,17 @@ public static class Entrada
         if (quantidade <= 0 || quantidade > QuantidadeMaxima) throw new ErroDeValidacao("Informe uma quantidade maior que zero.");
         if (decimal.Round(quantidade, 3) != quantidade) throw new ErroDeValidacao("A quantidade aceita no máximo 3 casas decimais.");
         return quantidade;
+    }
+
+    public static decimal? QuantidadeOpcional(decimal? quantidade) => quantidade is null ? null : Quantidade(quantidade.Value);
+
+    /// <summary>Preço unitário em reais: vazio é permitido; se informado, não pode ser negativo e vai até os centavos.</summary>
+    public static decimal? Preco(decimal? preco, string rotulo = "O preço")
+    {
+        if (preco is null) return null;
+        if (preco < 0 || preco > PrecoMaximo) throw new ErroDeValidacao($"{rotulo} deve estar entre R$ 0,00 e R$ 999.999,99.");
+        if (decimal.Round(preco.Value, 2) != preco) throw new ErroDeValidacao($"{rotulo} aceita no máximo 2 casas decimais (centavos).");
+        return preco;
     }
 }
 
@@ -84,16 +96,36 @@ public static class Mapeamentos
 
     public static ItemDaListaResposta ParaResposta(this ItemDaLista i)
     {
-        return new ItemDaListaResposta(i.Id, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot, i.QuantidadePlanejada, i.Comprado, i.CompradoEm, i.CompradoPorUsuarioId, i.AdicionadoPorUsuarioId, i.Ordem, i.Versao);
+        return new ItemDaListaResposta(
+            i.Id, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot, i.QuantidadePlanejada, i.QuantidadeComprada,
+            i.PrecoEstimado, i.PrecoUnitario, CalculoDeTotais.TotalEstimadoDoItem(i), CalculoDeTotais.TotalRealizadoDoItem(i),
+            i.Comprado, i.CompradoEm, i.CompradoPorUsuarioId, i.AdicionadoPorUsuarioId, i.Ordem, i.Versao);
     }
 
     public static ListaResumoResposta ParaResposta(this ResumoDeLista r)
     {
-        return new ListaResumoResposta(r.Id, r.Competencia, Competencia.Parse(r.Competencia).Nome, r.Nome, r.Principal, r.Status, r.FinalizadaEm, r.TotalDeItens, r.Comprados, RegrasDeLista.PercentualConcluido(r.TotalDeItens, r.Comprados));
+        return new ListaResumoResposta(
+            r.Id, r.Competencia, Competencia.Parse(r.Competencia).Nome, r.Nome, r.Principal, r.Status, r.FinalizadaEm, r.TotalDeItens, r.Comprados,
+            RegrasDeLista.PercentualConcluido(r.TotalDeItens, r.Comprados), r.TotalEstimado, r.TotalRealizado);
     }
 
+    /// <summary>Em lista finalizada vale o total congelado na finalização; em andamento, a soma atual dos itens.</summary>
     public static ResumoDeLista ParaResumo(this ListaDeCompras lista, IReadOnlyCollection<ItemDaLista> itens)
     {
-        return new ResumoDeLista(lista.Id, lista.Competencia, lista.Nome, lista.Principal, lista.Status, lista.FinalizadaEm, itens.Count, itens.Count(i => i.Comprado));
+        var estimado = itens.Sum(CalculoDeTotais.TotalEstimadoDoItem);
+        var realizado = lista.Finalizada && lista.TotalGastoFinal is { } congelado ? congelado : itens.Sum(CalculoDeTotais.TotalRealizadoDoItem);
+        return new ResumoDeLista(lista.Id, lista.Competencia, lista.Nome, lista.Principal, lista.Status, lista.FinalizadaEm, itens.Count, itens.Count(i => i.Comprado), estimado, realizado);
+    }
+
+    public static TotaisResposta ParaResposta(this TotaisDaLista t)
+    {
+        return new TotaisResposta(t.Estimado, t.Realizado, t.Restante, t.Itens, t.Comprados, t.CompradosSemPreco,
+            t.PorCategoria.Select(c => new TotaisPorCategoriaResposta(c.Categoria, c.Estimado, c.Realizado, c.Itens, c.Comprados)).ToList());
+    }
+
+    public static ListaResposta ParaListaResposta(this ListaDeCompras lista, IReadOnlyList<ItemDaLista> itens)
+    {
+        var ordenados = itens.OrderBy(i => i.Ordem).ToList();
+        return new ListaResposta(lista.ParaResumo(ordenados).ParaResposta(), ordenados.Select(i => i.ParaResposta()).ToList(), CalculoDeTotais.Calcular(ordenados).ParaResposta());
     }
 }

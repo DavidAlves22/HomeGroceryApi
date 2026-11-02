@@ -44,3 +44,11 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - Todo caso de uso filtra por `IUsuarioAtual.GrupoId` (claim `grupo_id` do JWT). Nunca buscar por id sem o grupo.
 - Casos de uso são registrados por varredura do namespace `Application.UseCases` (`AddCasosDeUso`).
 - Testes de integração (`Tests/Integracao`) sobem a API em memória contra Postgres real em localhost:5433 (banco descartável por execução) e viram "ignorados" se o Postgres não estiver no ar.
+
+## Fase 2 (financeiro) — decisões
+- Dinheiro em `decimal` (nunca double). Cada linha é arredondada ao centavo (`MidpointRounding.AwayFromZero`) ANTES de somar: `CalculoDeTotais`.
+- `PrecoEstimado` é referência; só `PrecoUnitario` pago, em item COMPRADO, entra no total gasto. Estimado nunca vira gasto sozinho. `QuantidadeComprada` (opcional) substitui a planejada no total.
+- Preço fica no item da lista (snapshot do mês): comprar mais caro depois não altera meses anteriores. Não existe tabela separada de histórico de preços: as análises leem os próprios itens (`AnaliseDeCompras`, funções puras).
+- Preços de g/ml são normalizados para kg/litro; unidades incompatíveis (pacote x kg) formam séries separadas.
+- `Finalizar` congela `TotalGastoFinal`; `Reabrir` limpa. Resumos de lista finalizada usam o valor congelado.
+- Endpoints: `GET /analises/gastos?meses=&competencia=` e `GET /analises/precos`.

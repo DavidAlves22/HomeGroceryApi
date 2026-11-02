@@ -50,8 +50,15 @@ public sealed class ListarListas
     /// <summary>Do mês mais recente para o mais antigo: serve ao Início e ao Histórico.</summary>
     public async Task<IReadOnlyList<ListaResumoResposta>> ExecutarAsync(CancellationToken ct)
     {
-        var resumos = await _listas.ListarResumosAsync(_usuario.GrupoId, ct);
-        return resumos.OrderByDescending(r => r.Competencia).ThenByDescending(r => r.Principal).Select(r => r.ParaResposta()).ToList();
+        var listas = await _listas.ListarAsync(_usuario.GrupoId, ct);
+        var itensPorLista = (await _listas.ListarItensComCompetenciaAsync(_usuario.GrupoId, ct)).GroupBy(i => i.Item.ListaId).ToDictionary(g => g.Key, g => g.Select(x => x.Item).ToList());
+
+        return listas
+            .Select(l => l.ParaResumo(itensPorLista.GetValueOrDefault(l.Id, [])))
+            .OrderByDescending(r => r.Competencia, StringComparer.Ordinal)
+            .ThenByDescending(r => r.Principal)
+            .Select(r => r.ParaResposta())
+            .ToList();
     }
 }
 
@@ -65,7 +72,7 @@ public sealed class ObterLista : CasoDeUsoDeLista
     {
         var lista = await ObterListaAsync(listaId, ct);
         var itens = await Listas.ListarItensAsync(Usuario.GrupoId, listaId, ct);
-        return new ListaResposta(lista.ParaResumo(itens).ParaResposta(), itens.OrderBy(i => i.Ordem).Select(i => i.ParaResposta()).ToList());
+        return lista.ParaListaResposta(itens);
     }
 }
 
@@ -108,7 +115,7 @@ public sealed class CriarLista
 
         await _listas.AdicionarAsync(lista, itens, ct);
         await _unidade.SalvarAsync(ct);
-        return new ListaResposta(lista.ParaResumo(itens).ParaResposta(), itens.Select(i => i.ParaResposta()).ToList());
+        return lista.ParaListaResposta(itens);
     }
 
     private async Task<List<ItemDaLista>> CopiarDoModeloAsync(ListaDeCompras lista, IReadOnlyList<Guid>? idsSelecionados, CancellationToken ct)
@@ -143,13 +150,14 @@ public sealed class AdicionarItemNaLista : CasoDeUsoDeLista
     {
         var nome = Entrada.Nome(requisicao.Nome);
         var quantidade = Entrada.Quantidade(requisicao.Quantidade);
+        var precoEstimado = Entrada.Preco(requisicao.PrecoEstimado, "O preço estimado");
         var lista = await ObterListaAsync(listaId, ct);
         lista.GarantirEditavel();
 
         // Produto novo entra só no cadastro central; a lista padrão não é tocada (RN-6).
         var (produto, categoria) = await _catalogo.ResolverAsync(Usuario.GrupoId, nome, requisicao.CategoriaId, requisicao.Unidade, ct);
         var ordem = await Listas.ProximaOrdemDeItemAsync(listaId, ct);
-        var item = ItemDaLista.Criar(Guid.CreateVersion7(), listaId, lista.GrupoId, produto.Id, nome, categoria.Id, categoria.Nome, requisicao.Unidade, quantidade, ordem, Usuario.UsuarioId);
+        var item = ItemDaLista.Criar(Guid.CreateVersion7(), listaId, lista.GrupoId, produto.Id, nome, categoria.Id, categoria.Nome, requisicao.Unidade, quantidade, ordem, Usuario.UsuarioId, precoEstimado);
 
         await Listas.AdicionarItemAsync(item, ct);
         await _unidade.SalvarAsync(ct);
@@ -172,6 +180,9 @@ public sealed class EditarItemDaLista : CasoDeUsoDeLista
     {
         var nome = Entrada.Nome(requisicao.Nome);
         var quantidade = Entrada.Quantidade(requisicao.Quantidade);
+        var quantidadeComprada = Entrada.QuantidadeOpcional(requisicao.QuantidadeComprada);
+        var precoEstimado = Entrada.Preco(requisicao.PrecoEstimado, "O preço estimado");
+        var precoPago = Entrada.Preco(requisicao.PrecoUnitario, "O preço pago");
         var lista = await ObterListaAsync(listaId, ct);
         lista.GarantirEditavel();
         var item = await ObterItemAsync(listaId, itemId, ct);
@@ -180,7 +191,7 @@ public sealed class EditarItemDaLista : CasoDeUsoDeLista
         if (item.Versao != requisicao.Versao) throw new ErroDeConflito("Este item foi alterado por outra pessoa. Atualize a lista e tente de novo.");
 
         var (produto, categoria) = await _catalogo.ResolverAsync(Usuario.GrupoId, nome, requisicao.CategoriaId, requisicao.Unidade, ct);
-        item.Editar(produto.Id, nome, categoria.Id, categoria.Nome, requisicao.Unidade, quantidade);
+        item.Editar(produto.Id, nome, categoria.Id, categoria.Nome, requisicao.Unidade, quantidade, quantidadeComprada, precoEstimado, precoPago);
 
         await _unidade.SalvarAsync(ct);
         return item.ParaResposta();
@@ -243,9 +254,12 @@ public sealed class FinalizarLista : CasoDeUsoDeLista
     public async Task<ListaResumoResposta> ExecutarAsync(Guid listaId, CancellationToken ct)
     {
         var lista = await ObterListaAsync(listaId, ct);
-        lista.Finalizar(_relogio.AgoraUtc);
+        var itens = await Listas.ListarItensAsync(Usuario.GrupoId, listaId, ct);
+
+        // O total gasto é congelado agora: a lista finalizada guarda o valor real da compra.
+        lista.Finalizar(_relogio.AgoraUtc, itens.Sum(CalculoDeTotais.TotalRealizadoDoItem));
         await _unidade.SalvarAsync(ct);
-        return lista.ParaResumo(await Listas.ListarItensAsync(Usuario.GrupoId, listaId, ct)).ParaResposta();
+        return lista.ParaResumo(itens).ParaResposta();
     }
 }
 
