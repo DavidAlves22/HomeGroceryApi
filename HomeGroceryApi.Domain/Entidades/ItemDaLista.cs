@@ -1,0 +1,65 @@
+using HomeGroceryApi.Domain.Enums;
+
+namespace HomeGroceryApi.Domain.Entidades;
+
+/// <summary>
+/// Item de uma lista mensal. Guarda um SNAPSHOT (nome, categoria e unidade copiados) para que
+/// editar ou apagar o cadastro depois nunca altere o histórico. `Versao` sobe a cada alteração e
+/// serve de controle de concorrência: duas pessoas editando o mesmo item não se sobrescrevem.
+/// </summary>
+public sealed class ItemDaLista
+{
+    public Guid Id { get; private set; }
+    public Guid ListaId { get; private set; }
+    public Guid GrupoId { get; private set; }
+    public Guid? ProdutoId { get; private set; }
+    public string NomeSnapshot { get; private set; } = string.Empty;
+    public Guid? CategoriaId { get; private set; }
+    public string CategoriaNomeSnapshot { get; private set; } = string.Empty;
+    public UnidadeDeMedidaEnum UnidadeSnapshot { get; private set; }
+    public decimal QuantidadePlanejada { get; private set; }
+    public bool Comprado { get; private set; }
+    public DateTime? CompradoEm { get; private set; }
+    public Guid? CompradoPorUsuarioId { get; private set; }
+    public Guid AdicionadoPorUsuarioId { get; private set; }
+    public int Ordem { get; private set; }
+    public int Versao { get; private set; }
+
+    private ItemDaLista()
+    {
+    }
+
+    public static ItemDaLista Criar(Guid id, Guid listaId, Guid grupoId, Guid? produtoId, string nome, Guid? categoriaId, string categoriaNome, UnidadeDeMedidaEnum unidade, decimal quantidade, int ordem, Guid usuarioId)
+    {
+        return new ItemDaLista
+        {
+            Id = id, ListaId = listaId, GrupoId = grupoId, ProdutoId = produtoId, NomeSnapshot = nome, CategoriaId = categoriaId,
+            CategoriaNomeSnapshot = categoriaNome, UnidadeSnapshot = unidade, QuantidadePlanejada = quantidade, Ordem = ordem,
+            AdicionadoPorUsuarioId = usuarioId, Versao = 1,
+        };
+    }
+
+    public void Editar(Guid produtoId, string nome, Guid categoriaId, string categoriaNome, UnidadeDeMedidaEnum unidade, decimal quantidade)
+    {
+        ProdutoId = produtoId;
+        NomeSnapshot = nome;
+        CategoriaId = categoriaId;
+        CategoriaNomeSnapshot = categoriaNome;
+        UnidadeSnapshot = unidade;
+        QuantidadePlanejada = quantidade;
+        Versao++;
+    }
+
+    /// <summary>
+    /// Marcar/desmarcar é idempotente (repetir o mesmo comando dá o mesmo resultado) e não exige versão:
+    /// quem marcou por último vale, e o app mostra quem foi.
+    /// </summary>
+    public void DefinirComprado(bool comprado, Guid usuarioId, DateTime agora)
+    {
+        if (Comprado == comprado) return;
+        Comprado = comprado;
+        CompradoEm = comprado ? agora : null;
+        CompradoPorUsuarioId = comprado ? usuarioId : null;
+        Versao++;
+    }
+}

@@ -21,4 +21,19 @@ public sealed class Categoria
     {
         return new Categoria { Id = id, GrupoId = grupoId, Nome = nome, Ordem = ordem, Padrao = padrao };
     }
+
+    public void Renomear(string nome)
+    {
+        Nome = nome;
+    }
+
+    public void DefinirOrdem(int ordem)
+    {
+        Ordem = ordem;
+    }
+
+    public void Excluir(DateTime agora)
+    {
+        ExcluidoEm ??= agora;
+    }
 }

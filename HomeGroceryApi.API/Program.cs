@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
 using HomeGroceryApi.API.Infra;
+using HomeGroceryApi.Application.Interfaces;
 using HomeGroceryApi.CrossCutting;
 using HomeGroceryApi.CrossCutting.IoC;
 using HomeGroceryApi.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,9 +14,19 @@ var builder = WebApplication.CreateBuilder(args);
 var porta = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrEmpty(porta)) builder.WebHost.UseUrls($"http://0.0.0.0:{porta}");
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+    .ConfigureApiBehaviorOptions(o => o.InvalidModelStateResponseFactory = _ => new BadRequestObjectResult(new ProblemDetails
+    {
+        Status = StatusCodes.Status400BadRequest,
+        Title = "Dados inválidos",
+        Detail = "Os dados enviados estão incompletos ou em formato inválido. Confira os campos e tente de novo.",
+    }));
 builder.Services.AddExceptionHandler<TratadorDeErros>();
 builder.Services.AddProblemDetails();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUsuarioAtual, UsuarioAtual>();
 
 builder.Services.AddInfraestrutura(builder.Configuration);
 builder.Services.AddCasosDeUso();

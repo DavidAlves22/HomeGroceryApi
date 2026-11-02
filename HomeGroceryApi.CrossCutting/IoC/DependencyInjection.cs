@@ -1,5 +1,6 @@
 using HomeGroceryApi.Application.Interfaces;
 using HomeGroceryApi.Application.Opcoes;
+using HomeGroceryApi.Application.Servicos;
 using HomeGroceryApi.Application.UseCases.Autenticacao;
 using HomeGroceryApi.Domain.Interfaces;
 using HomeGroceryApi.Infrastructure.Identity;
@@ -45,17 +46,26 @@ public static class DependencyInjection
         servicos.AddScoped<IGrupoRepository, GrupoRepository>();
         servicos.AddScoped<ITokenDeRenovacaoRepository, TokenDeRenovacaoRepository>();
         servicos.AddScoped<IUnidadeDeTrabalho, UnidadeDeTrabalho>();
+        servicos.AddScoped<ICategoriaRepository, CategoriaRepository>();
+        servicos.AddScoped<IProdutoRepository, ProdutoRepository>();
+        servicos.AddScoped<IModeloRepository, ModeloRepository>();
+        servicos.AddScoped<IListaRepository, ListaRepository>();
 
         return servicos;
     }
 
+    /// <summary>
+    /// Registra todo caso de uso concreto (qualquer classe em Application.UseCases), assim um caso de uso
+    /// novo não depende de alguém lembrar de adicionar uma linha aqui.
+    /// </summary>
     public static IServiceCollection AddCasosDeUso(this IServiceCollection servicos)
     {
-        servicos.AddScoped<EmissorDeSessao>();
-        servicos.AddScoped<CadastrarUsuario>();
-        servicos.AddScoped<FazerLogin>();
-        servicos.AddScoped<RenovarSessao>();
+        var casosDeUso = typeof(CadastrarUsuario).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && t.Namespace is not null && t.Namespace.StartsWith("HomeGroceryApi.Application.UseCases"));
 
+        foreach (var tipo in casosDeUso) servicos.AddScoped(tipo);
+
+        servicos.AddScoped<CatalogoDeProdutos>();
         return servicos;
     }
 }

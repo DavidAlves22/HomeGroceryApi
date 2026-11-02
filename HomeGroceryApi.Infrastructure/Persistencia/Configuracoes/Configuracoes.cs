@@ -33,7 +33,7 @@ public sealed class CategoriaConfiguracao : IEntityTypeConfiguration<Categoria>
         builder.ToTable("categorias");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();
-        builder.Property(c => c.Nome).HasMaxLength(60).IsRequired();
+        builder.Property(c => c.Nome).HasMaxLength(120).IsRequired();
         builder.HasOne<Grupo>().WithMany().HasForeignKey(c => c.GrupoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(c => new { c.GrupoId, c.Ordem });
     }

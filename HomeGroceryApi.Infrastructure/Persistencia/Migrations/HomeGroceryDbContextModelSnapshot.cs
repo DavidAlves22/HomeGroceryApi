@@ -35,8 +35,8 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
 
                     b.Property<string>("Nome")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
@@ -72,6 +72,157 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.ToTable("grupos", (string)null);
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ItemDaLista", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdicionadoPorUsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoriaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CategoriaNomeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<bool>("Comprado")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("CompradoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompradoPorUsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ListaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NomeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ProdutoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("QuantidadePlanejada")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
+
+                    b.Property<string>("UnidadeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Versao")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GrupoId");
+
+                    b.HasIndex("ListaId", "Ordem");
+
+                    b.ToTable("itens_da_lista", (string)null);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ItemDoModelo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoriaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ProdutoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("QuantidadePadrao")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoriaId");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.HasIndex("GrupoId", "Ordem");
+
+                    b.ToTable("itens_do_modelo", (string)null);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ListaDeCompras", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Competencia")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CriadoPorUsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("FinalizadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<bool>("Principal")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GrupoId", "Competencia")
+                        .IsUnique()
+                        .HasDatabaseName("ux_lista_principal_por_mes")
+                        .HasFilter("\"Principal\" = true");
+
+                    b.ToTable("listas_de_compras", (string)null);
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.MembroDoGrupo", b =>
                 {
                     b.Property<Guid>("GrupoId")
@@ -91,6 +242,49 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("membros_do_grupo", (string)null);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Produto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoriaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ExcluidoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Favorito")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("UnidadePadrao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoriaId");
+
+                    b.HasIndex("GrupoId", "Nome");
+
+                    b.ToTable("produtos", (string)null);
                 });
 
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.TokenDeRenovacao", b =>
@@ -330,8 +524,61 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ItemDaLista", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.ListaDeCompras", null)
+                        .WithMany()
+                        .HasForeignKey("ListaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ItemDoModelo", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Categoria", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Produto", null)
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ListaDeCompras", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.MembroDoGrupo", b =>
                 {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Produto", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Categoria", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
                         .WithMany()
                         .HasForeignKey("GrupoId")

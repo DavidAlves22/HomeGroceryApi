@@ -24,6 +24,8 @@ public static class ConfiguracoesIniciais
 
         servicos.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
+            // Mantém os nomes originais das claims ("sub", "grupo_id") em vez de renomeá-las para URIs longas.
+            o.MapInboundClaims = false;
             o.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -43,12 +45,13 @@ public static class ConfiguracoesIniciais
         servicos.AddCors(o => o.AddPolicy(PoliticaDeCors, p => p.WithOrigins(origens).AllowAnyHeader().AllowAnyMethod()));
 
         // Freia tentativa de adivinhar senha: 10 chamadas por minuto por IP nos endpoints de autenticação.
+        var tentativasPorMinuto = configuracao.GetValue("Seguranca:TentativasDeAutenticacaoPorMinuto", 10);
         servicos.AddRateLimiter(o =>
         {
             o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             o.AddPolicy(LimiteDeAutenticacao, contexto => RateLimitPartition.GetFixedWindowLimiter(
                 contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
-                _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = tentativasPorMinuto, Window = TimeSpan.FromMinutes(1) }));
         });
 
         servicos.AddEndpointsApiExplorer();

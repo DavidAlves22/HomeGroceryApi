@@ -1,6 +1,9 @@
 using HomeGroceryApi.Application.Excecoes;
+using HomeGroceryApi.Domain.Excecoes;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace HomeGroceryApi.API.Infra;
 
@@ -25,6 +28,9 @@ public sealed class TratadorDeErros : IExceptionHandler
             ErroDeAutenticacao => (StatusCodes.Status401Unauthorized, "Não autenticado"),
             ErroDeNaoEncontrado => (StatusCodes.Status404NotFound, "Não encontrado"),
             ErroDeConflito => (StatusCodes.Status409Conflict, "Conflito"),
+            ErroDeDominio => (StatusCodes.Status422UnprocessableEntity, "Regra de negócio"),
+            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflito"),
+            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } => (StatusCodes.Status409Conflict, "Conflito"),
             _ => (StatusCodes.Status500InternalServerError, "Erro inesperado"),
         };
 
@@ -37,7 +43,13 @@ public sealed class TratadorDeErros : IExceptionHandler
         {
             Status = status,
             Title = titulo,
-            Detail = excecao is ErroDeAplicacao ? excecao.Message : "Algo deu errado. Tente novamente em instantes.",
+            Detail = excecao switch
+            {
+                ErroDeAplicacao or ErroDeDominio => excecao.Message,
+                DbUpdateConcurrencyException => "Este registro foi alterado por outra pessoa. Atualize e tente de novo.",
+                _ when status == StatusCodes.Status409Conflict => "Já existe um registro igual a este.",
+                _ => "Algo deu errado. Tente novamente em instantes.",
+            },
         };
 
         if (excecao is ErroDeValidacao validacao) problema.Extensions["erros"] = validacao.Detalhes;
