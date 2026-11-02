@@ -35,6 +35,11 @@ public sealed class Produto
         Descricao = descricao;
     }
 
+    public void DefinirFavorito(bool favorito)
+    {
+        Favorito = favorito;
+    }
+
     public void MoverParaCategoria(Guid categoriaId)
     {
         CategoriaId = categoriaId;

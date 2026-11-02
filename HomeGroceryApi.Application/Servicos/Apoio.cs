@@ -97,8 +97,8 @@ public static class Mapeamentos
     public static ItemDaListaResposta ParaResposta(this ItemDaLista i)
     {
         return new ItemDaListaResposta(
-            i.Id, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot, i.QuantidadePlanejada, i.QuantidadeComprada,
-            i.PrecoEstimado, i.PrecoUnitario, CalculoDeTotais.TotalEstimadoDoItem(i), CalculoDeTotais.TotalRealizadoDoItem(i),
+            i.Id, i.ProdutoId, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot, i.QuantidadePlanejada, i.QuantidadeComprada,
+            i.PrecoEstimado, i.PrecoUnitario, i.PrecoReferencia, CalculoDeTotais.TotalEstimadoDoItem(i), CalculoDeTotais.TotalRealizadoDoItem(i),
             i.Comprado, i.CompradoEm, i.CompradoPorUsuarioId, i.AdicionadoPorUsuarioId, i.Ordem, i.Versao);
     }
 

@@ -46,6 +46,13 @@ public sealed class ListasController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, await casoDeUso.ExecutarAsync(id, requisicao, ct));
     }
 
+    [HttpPut("{id:guid}/itens/ordem")]
+    public async Task<IActionResult> ReordenarItens(Guid id, [FromBody] ReordenarRequisicao requisicao, [FromServices] ReordenarItensDaLista casoDeUso, CancellationToken ct)
+    {
+        await casoDeUso.ExecutarAsync(id, requisicao, ct);
+        return NoContent();
+    }
+
     [HttpPut("{id:guid}/itens/{itemId:guid}")]
     public async Task<ActionResult<ItemDaListaResposta>> EditarItem(Guid id, Guid itemId, [FromBody] EditarItemDaListaRequisicao requisicao, [FromServices] EditarItemDaLista casoDeUso, CancellationToken ct)
     {

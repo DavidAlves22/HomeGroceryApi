@@ -115,6 +115,10 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<decimal?>("PrecoReferencia")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
                     b.Property<decimal?>("PrecoUnitario")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");

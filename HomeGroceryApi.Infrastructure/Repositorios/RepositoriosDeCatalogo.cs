@@ -53,8 +53,11 @@ public sealed class ProdutoRepository : IProdutoRepository
     public Task<List<Produto>> BuscarAsync(Guid grupoId, string? termo, CancellationToken ct)
     {
         var consulta = _contexto.Produtos.Where(p => p.GrupoId == grupoId && p.ExcluidoEm == null);
-        if (!string.IsNullOrWhiteSpace(termo)) consulta = consulta.Where(p => EF.Functions.ILike(p.Nome, Busca.Contem(termo)));
-        return consulta.OrderBy(p => p.Nome).Take(50).ToListAsync(ct);
+        consulta = consulta.OrderBy(p => p.Nome);
+
+        // Com termo (sugestões ao digitar) limita a 50; sem termo devolve todos, porque outros casos de uso precisam de todos.
+        if (string.IsNullOrWhiteSpace(termo)) return consulta.ToListAsync(ct);
+        return consulta.Where(p => EF.Functions.ILike(p.Nome, Busca.Contem(termo))).Take(50).ToListAsync(ct);
     }
 
     public Task<Produto?> ObterAsync(Guid grupoId, Guid id, CancellationToken ct)

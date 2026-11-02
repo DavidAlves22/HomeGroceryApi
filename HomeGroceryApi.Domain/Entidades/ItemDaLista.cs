@@ -29,6 +29,9 @@ public sealed class ItemDaLista
     /// <summary>Preço unitário efetivamente pago. Só ele entra no total gasto.</summary>
     public decimal? PrecoUnitario { get; private set; }
 
+    /// <summary>Preço pago em outra lista (ao copiar um mês). Só consulta: nunca entra em totais.</summary>
+    public decimal? PrecoReferencia { get; private set; }
+
     public bool Comprado { get; private set; }
     public DateTime? CompradoEm { get; private set; }
     public Guid? CompradoPorUsuarioId { get; private set; }
@@ -40,13 +43,13 @@ public sealed class ItemDaLista
     {
     }
 
-    public static ItemDaLista Criar(Guid id, Guid listaId, Guid grupoId, Guid? produtoId, string nome, Guid? categoriaId, string categoriaNome, UnidadeDeMedidaEnum unidade, decimal quantidade, int ordem, Guid usuarioId, decimal? precoEstimado = null)
+    public static ItemDaLista Criar(Guid id, Guid listaId, Guid grupoId, Guid? produtoId, string nome, Guid? categoriaId, string categoriaNome, UnidadeDeMedidaEnum unidade, decimal quantidade, int ordem, Guid usuarioId, decimal? precoEstimado = null, decimal? precoReferencia = null)
     {
         return new ItemDaLista
         {
             Id = id, ListaId = listaId, GrupoId = grupoId, ProdutoId = produtoId, NomeSnapshot = nome, CategoriaId = categoriaId,
             CategoriaNomeSnapshot = categoriaNome, UnidadeSnapshot = unidade, QuantidadePlanejada = quantidade, Ordem = ordem,
-            AdicionadoPorUsuarioId = usuarioId, PrecoEstimado = precoEstimado, Versao = 1,
+            AdicionadoPorUsuarioId = usuarioId, PrecoEstimado = precoEstimado, PrecoReferencia = precoReferencia, Versao = 1,
         };
     }
 
@@ -62,6 +65,11 @@ public sealed class ItemDaLista
         PrecoEstimado = precoEstimado;
         PrecoUnitario = precoUnitario;
         Versao++;
+    }
+
+    public void DefinirOrdem(int ordem)
+    {
+        Ordem = ordem;
     }
 
     /// <summary>

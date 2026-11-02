@@ -52,3 +52,9 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - Preços de g/ml são normalizados para kg/litro; unidades incompatíveis (pacote x kg) formam séries separadas.
 - `Finalizar` congela `TotalGastoFinal`; `Reabrir` limpa. Resumos de lista finalizada usam o valor congelado.
 - Endpoints: `GET /analises/gastos?meses=&competencia=` e `GET /analises/precos`.
+
+## Fase 3 (experiência avançada) — decisões
+- Origem `Copiar` cria a lista a partir de QUALQUER lista do grupo: itens novos, pendentes, sem quantidade comprada nem preço pago. O preço pago na origem vira `PrecoReferencia` (consulta), que nunca entra em totais. `PrecoEstimado` é mantido. Origem de outro grupo → 404.
+- `PUT /listas/{id}/itens/ordem` guarda a ordem manual (corredores do mercado); cópias preservam a ordem. Lista finalizada recusa (422).
+- Favoritos: `PUT /produtos/{id}/favorito`. Recorrentes = comprados em 2+ listas diferentes. `GET /produtos/sugestoes` devolve favoritos primeiro e depois recorrentes (máx. 12).
+- `GET /produtos` sem `q` devolve TODOS (outros casos de uso, como excluir categoria, dependem disso); com `q` limita a 50.

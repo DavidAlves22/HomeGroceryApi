@@ -59,6 +59,18 @@ public sealed class ProdutosController : ControllerBase
         return Ok(await casoDeUso.ExecutarAsync(q, ct));
     }
 
+    [HttpGet("sugestoes")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoResposta>>> Sugestoes([FromServices] ObterSugestoesDeProdutos casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(ct));
+    }
+
+    [HttpPut("{id:guid}/favorito")]
+    public async Task<ActionResult<ProdutoResposta>> Favoritar(Guid id, [FromBody] FavoritoRequisicao requisicao, [FromServices] AlternarFavoritoDoProduto casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, requisicao.Favorito, ct));
+    }
+
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProdutoResposta>> Editar(Guid id, [FromBody] EditarProdutoRequisicao requisicao, [FromServices] EditarProduto casoDeUso, CancellationToken ct)
     {

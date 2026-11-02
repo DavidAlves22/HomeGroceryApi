@@ -70,6 +70,7 @@ public sealed class ItemDaListaConfiguracao : IEntityTypeConfiguration<ItemDaLis
         builder.Property(i => i.QuantidadeComprada).HasPrecision(12, 3);
         builder.Property(i => i.PrecoEstimado).HasPrecision(12, 2);
         builder.Property(i => i.PrecoUnitario).HasPrecision(12, 2);
+        builder.Property(i => i.PrecoReferencia).HasPrecision(12, 2);
 
         // ProdutoId e CategoriaId são só referências informativas (sem FK): o histórico vive do snapshot.
         builder.Property(i => i.Versao).IsConcurrencyToken();

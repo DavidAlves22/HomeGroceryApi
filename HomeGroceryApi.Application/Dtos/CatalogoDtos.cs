@@ -4,6 +4,8 @@ namespace HomeGroceryApi.Application.Dtos;
 
 public sealed record NomeRequisicao(string Nome);
 
+public sealed record FavoritoRequisicao(bool Favorito);
+
 public sealed record ReordenarRequisicao(IReadOnlyList<Guid> Ids);
 
 public sealed record CategoriaResposta(Guid Id, string Nome, int Ordem, bool Padrao);
