@@ -1,6 +1,7 @@
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.Excecoes;
 using HomeGroceryApi.Application.Interfaces;
+using HomeGroceryApi.Application.Servicos;
 using HomeGroceryApi.Domain.Interfaces;
 
 namespace HomeGroceryApi.Application.UseCases.Autenticacao;
@@ -14,17 +15,17 @@ public sealed class RenovarSessao
     private readonly ITokenService _tokens;
     private readonly ITokenDeRenovacaoRepository _tokensDeRenovacao;
     private readonly IServicoDeContas _contas;
-    private readonly IGrupoRepository _grupos;
+    private readonly ServicoDeGrupoAtivo _grupoAtivo;
     private readonly IUnidadeDeTrabalho _unidadeDeTrabalho;
     private readonly EmissorDeSessao _emissor;
     private readonly IRelogio _relogio;
 
-    public RenovarSessao(ITokenService tokens, ITokenDeRenovacaoRepository tokensDeRenovacao, IServicoDeContas contas, IGrupoRepository grupos, IUnidadeDeTrabalho unidadeDeTrabalho, EmissorDeSessao emissor, IRelogio relogio)
+    public RenovarSessao(ITokenService tokens, ITokenDeRenovacaoRepository tokensDeRenovacao, IServicoDeContas contas, ServicoDeGrupoAtivo grupoAtivo, IUnidadeDeTrabalho unidadeDeTrabalho, EmissorDeSessao emissor, IRelogio relogio)
     {
         _tokens = tokens;
         _tokensDeRenovacao = tokensDeRenovacao;
         _contas = contas;
-        _grupos = grupos;
+        _grupoAtivo = grupoAtivo;
         _unidadeDeTrabalho = unidadeDeTrabalho;
         _emissor = emissor;
         _relogio = relogio;
@@ -40,7 +41,7 @@ public sealed class RenovarSessao
         if (registro is null || !registro.EstaValido(agora)) throw new ErroDeAutenticacao(mensagem);
 
         var conta = await _contas.ObterPorIdAsync(registro.UsuarioId, ct) ?? throw new ErroDeAutenticacao(mensagem);
-        var grupoId = await _grupos.ObterGrupoPessoalDoUsuarioAsync(conta.Id, ct) ?? throw new ErroDeAutenticacao(mensagem);
+        var grupoId = await _grupoAtivo.ResolverAsync(conta, ct);
 
         registro.Revogar(agora);
         var sessao = await _emissor.EmitirAsync(conta, grupoId, ct);

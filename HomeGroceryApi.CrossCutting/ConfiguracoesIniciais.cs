@@ -26,6 +26,15 @@ public static class ConfiguracoesIniciais
         {
             // Mantém os nomes originais das claims ("sub", "grupo_id") em vez de renomeá-las para URIs longas.
             o.MapInboundClaims = false;
+            o.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = contexto =>
+                {
+                    var token = contexto.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(token) && contexto.Request.Path.StartsWithSegments("/hub")) contexto.Token = token;
+                    return Task.CompletedTask;
+                },
+            };
             o.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,

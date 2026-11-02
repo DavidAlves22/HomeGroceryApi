@@ -15,6 +15,11 @@ public sealed class Grupo
     {
     }
 
+    public void Renomear(string nome)
+    {
+        Nome = nome;
+    }
+
     public static Grupo CriarPessoal(Guid id, string nomeDoUsuario, DateTime agora)
     {
         return new Grupo { Id = id, Nome = $"Casa de {nomeDoUsuario}", Pessoal = true, CriadoEm = agora };

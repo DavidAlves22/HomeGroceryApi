@@ -34,8 +34,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         resposta.EnsureSuccessStatusCode();
 
         var sessao = await resposta.Content.ReadFromJsonAsync<JsonElement>();
-        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessao.GetProperty("tokenDeAcesso").GetString());
-        return new UsuarioDeTeste(cliente, sessao.GetProperty("usuario").GetProperty("id").GetGuid());
+        return new UsuarioDeTeste(cliente, sessao.GetProperty("usuario").GetProperty("id").GetGuid(), sessao);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -68,14 +67,35 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 /// <summary>Cliente HTTP já autenticado como um usuário recém-cadastrado (cada um tem o próprio grupo).</summary>
 public sealed class UsuarioDeTeste
 {
-    public UsuarioDeTeste(HttpClient http, Guid id)
+    public UsuarioDeTeste(HttpClient http, Guid id, JsonElement sessao)
     {
         Http = http;
         Id = id;
+        AplicarSessao(sessao);
     }
 
     public HttpClient Http { get; }
     public Guid Id { get; }
+    public string TokenDeAcesso { get; private set; } = string.Empty;
+    public string TokenDeRenovacao { get; private set; } = string.Empty;
+    public Guid GrupoId { get; private set; }
+
+    /// <summary>Passa a usar a sessão devolvida pela API (ex.: depois de entrar ou sair de um grupo).</summary>
+    public void AplicarSessao(JsonElement sessao)
+    {
+        TokenDeAcesso = sessao.GetProperty("tokenDeAcesso").GetString()!;
+        TokenDeRenovacao = sessao.GetProperty("tokenDeRenovacao").GetString()!;
+        GrupoId = sessao.GetProperty("grupoId").GetGuid();
+        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenDeAcesso);
+    }
+
+    /// <summary>Renova a sessão como o app faz depois de um 401.</summary>
+    public async Task<int> RenovarAsync()
+    {
+        var (status, corpo) = await EnviarAsync(HttpMethod.Post, "/autenticacao/renovar", new { tokenDeRenovacao = TokenDeRenovacao });
+        if (status == 200) AplicarSessao(corpo);
+        return status;
+    }
 
     public async Task<(int Status, JsonElement Corpo)> EnviarAsync(HttpMethod metodo, string caminho, object? corpo = null)
     {

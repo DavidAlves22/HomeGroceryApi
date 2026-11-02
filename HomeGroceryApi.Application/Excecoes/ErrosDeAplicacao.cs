@@ -45,3 +45,10 @@ public sealed class ErroDeNaoEncontrado : ErroDeAplicacao
     {
     }
 }
+
+public sealed class ErroDeAcessoNegado : ErroDeAplicacao
+{
+    public ErroDeAcessoNegado(string mensagem) : base(mensagem)
+    {
+    }
+}

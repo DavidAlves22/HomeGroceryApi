@@ -27,6 +27,7 @@ public sealed class TratadorDeErros : IExceptionHandler
             ErroDeValidacao => (StatusCodes.Status400BadRequest, "Dados inválidos"),
             ErroDeAutenticacao => (StatusCodes.Status401Unauthorized, "Não autenticado"),
             ErroDeNaoEncontrado => (StatusCodes.Status404NotFound, "Não encontrado"),
+            ErroDeAcessoNegado => (StatusCodes.Status403Forbidden, "Acesso negado"),
             ErroDeConflito => (StatusCodes.Status409Conflict, "Conflito"),
             ErroDeDominio => (StatusCodes.Status422UnprocessableEntity, "Regra de negócio"),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflito"),

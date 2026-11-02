@@ -58,3 +58,12 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - `PUT /listas/{id}/itens/ordem` guarda a ordem manual (corredores do mercado); cópias preservam a ordem. Lista finalizada recusa (422).
 - Favoritos: `PUT /produtos/{id}/favorito`. Recorrentes = comprados em 2+ listas diferentes. `GET /produtos/sugestoes` devolve favoritos primeiro e depois recorrentes (máx. 12).
 - `GET /produtos` sem `q` devolve TODOS (outros casos de uso, como excluir categoria, dependem disso); com `q` limita a 50.
+
+## Fase 4 (família e tempo real) — decisões
+- **Grupo ativo.** Um usuário pode ter vários vínculos (`MembroDoGrupo`), mas só um `Ativo`: o grupo do JWT. Entrar numa família desativa o vínculo pessoal (dados pessoais ficam guardados, nunca misturados); sair/ser removido reativa o pessoal, ou cria um novo se não houver (`ServicoDeGrupoAtivo`). Login e renovação sempre devolvem o grupo ativo.
+- **Segurança:** `ValidarMembroDoGrupoMiddleware` confere a cada requisição autenticada (exceto `/autenticacao`) se o usuário é membro ATIVO do grupo do token; removido → 401 e o app renova a sessão. O hub aplica a mesma regra ao conectar.
+- **Convites:** código de 8 caracteres (alfabeto sem O/0/I/1), uso único, 7 dias, só administrador gera. Códigos inexistentes, expirados e usados dão a MESMA resposta (404). `POST /grupo/entrar` usa o rate limit de autenticação. Só entra em família quem está sozinho no grupo atual.
+- **Papéis:** Administrador convida, renomeia e remove (403 para membro). Se o único administrador sai, o membro mais antigo é promovido.
+- **Tempo real:** SignalR em `/hub/grupo` (token em `access_token`). `UnidadeDeTrabalho.SalvarAsync` descobre pelo ChangeTracker o que mudou (itens/listas, catálogo, membros) e publica DEPOIS de gravar, então nenhuma operação esquece de avisar. Evento só carrega ids; o app busca o dado novo pela API. Falha ao avisar nunca derruba a operação.
+- **Conflitos entre pessoas:** marcar/desmarcar é idempotente (vale a última); editar exige a versão do item (409 se outra pessoa mudou antes).
+- Índice de vínculo ativo NÃO é único: o EF insere o novo antes de desativar o antigo.

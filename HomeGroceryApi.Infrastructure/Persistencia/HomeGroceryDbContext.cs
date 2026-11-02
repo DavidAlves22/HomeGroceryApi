@@ -16,6 +16,7 @@ public sealed class HomeGroceryDbContext : IdentityDbContext<ApplicationUser, Id
     public DbSet<MembroDoGrupo> Membros => Set<MembroDoGrupo>();
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<TokenDeRenovacao> TokensDeRenovacao => Set<TokenDeRenovacao>();
+    public DbSet<Convite> Convites => Set<Convite>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<ItemDoModelo> ItensDoModelo => Set<ItemDoModelo>();
     public DbSet<ListaDeCompras> Listas => Set<ListaDeCompras>();

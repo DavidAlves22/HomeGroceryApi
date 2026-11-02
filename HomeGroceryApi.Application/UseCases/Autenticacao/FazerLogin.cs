@@ -1,6 +1,7 @@
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.Excecoes;
 using HomeGroceryApi.Application.Interfaces;
+using HomeGroceryApi.Application.Servicos;
 using HomeGroceryApi.Domain.Interfaces;
 
 namespace HomeGroceryApi.Application.UseCases.Autenticacao;
@@ -12,14 +13,14 @@ namespace HomeGroceryApi.Application.UseCases.Autenticacao;
 public sealed class FazerLogin
 {
     private readonly IServicoDeContas _contas;
-    private readonly IGrupoRepository _grupos;
+    private readonly ServicoDeGrupoAtivo _grupoAtivo;
     private readonly IUnidadeDeTrabalho _unidadeDeTrabalho;
     private readonly EmissorDeSessao _emissor;
 
-    public FazerLogin(IServicoDeContas contas, IGrupoRepository grupos, IUnidadeDeTrabalho unidadeDeTrabalho, EmissorDeSessao emissor)
+    public FazerLogin(IServicoDeContas contas, ServicoDeGrupoAtivo grupoAtivo, IUnidadeDeTrabalho unidadeDeTrabalho, EmissorDeSessao emissor)
     {
         _contas = contas;
-        _grupos = grupos;
+        _grupoAtivo = grupoAtivo;
         _unidadeDeTrabalho = unidadeDeTrabalho;
         _emissor = emissor;
     }
@@ -30,8 +31,7 @@ public sealed class FazerLogin
         var conta = await _contas.ValidarCredenciaisAsync(email, requisicao.Senha ?? string.Empty, ct)
             ?? throw new ErroDeAutenticacao("E-mail ou senha incorretos.");
 
-        var grupoId = await _grupos.ObterGrupoPessoalDoUsuarioAsync(conta.Id, ct)
-            ?? throw new ErroDeAutenticacao("Conta sem grupo. Entre em contato com o suporte.");
+        var grupoId = await _grupoAtivo.ResolverAsync(conta, ct);
 
         var sessao = await _emissor.EmitirAsync(conta, grupoId, ct);
         await _unidadeDeTrabalho.SalvarAsync(ct);

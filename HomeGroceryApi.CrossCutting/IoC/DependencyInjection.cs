@@ -44,6 +44,8 @@ public static class DependencyInjection
         servicos.AddSingleton<ITokenService, TokenService>();
         servicos.AddScoped<IServicoDeContas, ServicoDeContas>();
         servicos.AddScoped<IGrupoRepository, GrupoRepository>();
+        servicos.AddScoped<IConviteRepository, ConviteRepository>();
+        servicos.AddSingleton<IGeradorDeCodigo, GeradorDeCodigo>();
         servicos.AddScoped<ITokenDeRenovacaoRepository, TokenDeRenovacaoRepository>();
         servicos.AddScoped<IUnidadeDeTrabalho, UnidadeDeTrabalho>();
         servicos.AddScoped<ICategoriaRepository, CategoriaRepository>();
@@ -66,6 +68,7 @@ public static class DependencyInjection
         foreach (var tipo in casosDeUso) servicos.AddScoped(tipo);
 
         servicos.AddScoped<CatalogoDeProdutos>();
+        servicos.AddScoped<ServicoDeGrupoAtivo>();
         return servicos;
     }
 }

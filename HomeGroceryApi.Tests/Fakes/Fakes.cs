@@ -69,11 +69,29 @@ public sealed class GrupoRepositoryFake : IGrupoRepository
         return Task.CompletedTask;
     }
 
-    public Task<Guid?> ObterGrupoPessoalDoUsuarioAsync(Guid usuarioId, CancellationToken ct)
+    public Task<Guid?> ObterGrupoAtivoDoUsuarioAsync(Guid usuarioId, CancellationToken ct)
     {
-        var grupoId = Membros.Where(m => m.UsuarioId == usuarioId).Select(m => (Guid?)m.GrupoId).FirstOrDefault();
+        var grupoId = Membros.Where(m => m.UsuarioId == usuarioId && m.Ativo).Select(m => (Guid?)m.GrupoId).FirstOrDefault();
         return Task.FromResult(grupoId);
     }
+
+    public Task<Grupo?> ObterAsync(Guid grupoId, CancellationToken ct) => Task.FromResult(Grupos.FirstOrDefault(g => g.Id == grupoId));
+
+    public Task<bool> EhMembroAtivoAsync(Guid usuarioId, Guid grupoId, CancellationToken ct) => Task.FromResult(Membros.Any(m => m.UsuarioId == usuarioId && m.GrupoId == grupoId && m.Ativo));
+
+    public Task<MembroDoGrupo?> ObterMembroAsync(Guid grupoId, Guid usuarioId, CancellationToken ct) => Task.FromResult(Membros.FirstOrDefault(m => m.GrupoId == grupoId && m.UsuarioId == usuarioId));
+
+    public Task<List<MembroDoGrupo>> ListarMembrosAsync(Guid grupoId, CancellationToken ct) => Task.FromResult(Membros.Where(m => m.GrupoId == grupoId).ToList());
+
+    public Task<List<MembroDoGrupo>> ListarVinculosDoUsuarioAsync(Guid usuarioId, CancellationToken ct) => Task.FromResult(Membros.Where(m => m.UsuarioId == usuarioId).ToList());
+
+    public Task AdicionarMembroAsync(MembroDoGrupo membro, CancellationToken ct)
+    {
+        Membros.Add(membro);
+        return Task.CompletedTask;
+    }
+
+    public void RemoverMembro(MembroDoGrupo membro) => Membros.Remove(membro);
 }
 
 public sealed class TokenDeRenovacaoRepositoryFake : ITokenDeRenovacaoRepository

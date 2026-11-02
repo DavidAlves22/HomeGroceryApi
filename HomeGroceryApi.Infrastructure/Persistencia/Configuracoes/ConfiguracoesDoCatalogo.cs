@@ -79,3 +79,16 @@ public sealed class ItemDaListaConfiguracao : IEntityTypeConfiguration<ItemDaLis
         builder.HasIndex(i => i.GrupoId);
     }
 }
+
+public sealed class ConviteConfiguracao : IEntityTypeConfiguration<Convite>
+{
+    public void Configure(EntityTypeBuilder<Convite> builder)
+    {
+        builder.ToTable("convites");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+        builder.Property(c => c.Codigo).HasMaxLength(8).IsRequired();
+        builder.HasIndex(c => c.Codigo).IsUnique();
+        builder.HasOne<Grupo>().WithMany().HasForeignKey(c => c.GrupoId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

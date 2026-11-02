@@ -51,6 +51,44 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.ToTable("categorias", (string)null);
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Convite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CriadoPorUsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UsadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UsadoPorUsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("GrupoId");
+
+                    b.ToTable("convites", (string)null);
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Grupo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -251,6 +289,9 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("EntrouEm")
                         .HasColumnType("timestamp with time zone");
 
@@ -259,7 +300,11 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
 
                     b.HasKey("GrupoId", "UsuarioId");
 
-                    b.HasIndex("UsuarioId");
+                    b.HasIndex("GrupoId");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_membro_ativo_por_usuario")
+                        .HasFilter("\"Ativo\" = true");
 
                     b.ToTable("membros_do_grupo", (string)null);
                 });
@@ -541,6 +586,15 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .WithMany()
                         .HasForeignKey("GrupoId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Convite", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

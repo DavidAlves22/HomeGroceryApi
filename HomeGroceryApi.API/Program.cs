@@ -27,6 +27,8 @@ builder.Services.AddExceptionHandler<TratadorDeErros>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioAtual, UsuarioAtual>();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificador, NotificadorSignalR>();
 
 builder.Services.AddInfraestrutura(builder.Configuration);
 builder.Services.AddCasosDeUso();
@@ -58,7 +60,11 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Depois de autenticar: quem foi removido do grupo (ou trocou de grupo) perde o acesso na hora, mesmo com token válido.
+app.UseMiddleware<ValidarMembroDoGrupoMiddleware>();
+
 app.MapControllers();
+app.MapHub<GrupoHub>("/hub/grupo");
 
 app.Run();
 

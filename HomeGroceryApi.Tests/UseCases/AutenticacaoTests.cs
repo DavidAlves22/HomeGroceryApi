@@ -1,5 +1,6 @@
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.Excecoes;
+using HomeGroceryApi.Application.Servicos;
 using HomeGroceryApi.Application.UseCases.Autenticacao;
 using HomeGroceryApi.Tests.Fakes;
 
@@ -18,9 +19,11 @@ public class AutenticacaoTests
 
     private CadastrarUsuario Cadastro() => new(_contas, _grupos, _unidade, Emissor(), _relogio);
 
-    private FazerLogin Login() => new(_contas, _grupos, _unidade, Emissor());
+    private ServicoDeGrupoAtivo GrupoAtivo() => new(_grupos, _relogio);
 
-    private RenovarSessao Renovacao() => new(_tokens, _tokensDeRenovacao, _contas, _grupos, _unidade, Emissor(), _relogio);
+    private FazerLogin Login() => new(_contas, GrupoAtivo(), _unidade, Emissor());
+
+    private RenovarSessao Renovacao() => new(_tokens, _tokensDeRenovacao, _contas, GrupoAtivo(), _unidade, Emissor(), _relogio);
 
     private static CadastroRequisicao CadastroValido(string email = "maria@exemplo.com") => new("Maria", email, "senha1234");
 

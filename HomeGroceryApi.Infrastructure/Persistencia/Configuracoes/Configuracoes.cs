@@ -22,7 +22,10 @@ public sealed class MembroDoGrupoConfiguracao : IEntityTypeConfiguration<MembroD
         builder.ToTable("membros_do_grupo");
         builder.HasKey(m => new { m.GrupoId, m.UsuarioId });
         builder.HasOne<Grupo>().WithMany().HasForeignKey(m => m.GrupoId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(m => m.UsuarioId);
+        // Um usuário tem exatamente um vínculo ativo (garantido pela lógica). Não é índice ÚNICO de propósito:
+        // ao trocar de grupo o EF insere o vínculo novo antes de desativar o antigo, e um índice único recusaria.
+        builder.HasIndex(m => m.UsuarioId).HasFilter("\"Ativo\" = true").HasDatabaseName("ix_membro_ativo_por_usuario");
+        builder.HasIndex(m => m.GrupoId);
     }
 }
 
