@@ -35,3 +35,12 @@ A API aplica as migrations ao subir (`Program.cs`).
 
 ## Hospedagem (custo ~zero)
 API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Padrao`, `Jwt__ChaveSecreta`, `Cors__OrigensPermitidas__0` (URL da PWA na Vercel), `PORT` (definida pelo Render).
+
+## Fase 1 (MVP) — decisões
+- Lista padrão = `itens_do_modelo` por grupo (sem tabela "modelo": um grupo tem um só). Criar lista mensal **copia** os itens (ids novos + snapshot de nome/categoria/unidade). Teste: `Alterar_a_lista_padrao_nao_muda_listas_ja_criadas`.
+- Uma lista **principal** por mês e grupo: índice único parcial `ux_lista_principal_por_mes`; a segunda exige `permitirDuplicada: true`.
+- `ItemDaLista.Versao` é token de concorrência (EF) e também conferido no caso de uso: edição com versão velha → 409. Marcar/desmarcar é idempotente e não exige versão.
+- Erros: `ErroDeDominio` → 422; validação → 400; não achou (ou é de outro grupo) → 404; conflito/concorrência/unique → 409.
+- Todo caso de uso filtra por `IUsuarioAtual.GrupoId` (claim `grupo_id` do JWT). Nunca buscar por id sem o grupo.
+- Casos de uso são registrados por varredura do namespace `Application.UseCases` (`AddCasosDeUso`).
+- Testes de integração (`Tests/Integracao`) sobem a API em memória contra Postgres real em localhost:5433 (banco descartável por execução) e viram "ignorados" se o Postgres não estiver no ar.
