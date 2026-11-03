@@ -39,6 +39,21 @@ public sealed class LojaRepository : ILojaRepository
         return _contexto.SecaoCategorias.Where(v => v.GrupoId == grupoId && v.LojaId == lojaId).OrderBy(v => v.Id).ToListAsync(ct);
     }
 
+    public Task<List<LocalDoProduto>> ListarLocaisDeProdutosAsync(Guid grupoId, Guid lojaId, CancellationToken ct)
+    {
+        return _contexto.LocaisDoProduto.Where(l => l.GrupoId == grupoId && l.LojaId == lojaId).OrderBy(l => l.Id).ToListAsync(ct);
+    }
+
+    public async Task AdicionarLocaisAsync(IEnumerable<LocalDoProduto> locais, CancellationToken ct)
+    {
+        await _contexto.LocaisDoProduto.AddRangeAsync(locais, ct);
+    }
+
+    public void RemoverLocais(IEnumerable<LocalDoProduto> locais)
+    {
+        _contexto.LocaisDoProduto.RemoveRange(locais);
+    }
+
     public async Task AdicionarAsync(Loja loja, CancellationToken ct)
     {
         await _contexto.Lojas.AddAsync(loja, ct);

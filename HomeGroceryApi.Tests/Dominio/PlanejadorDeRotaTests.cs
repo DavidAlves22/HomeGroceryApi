@@ -23,6 +23,45 @@ public class PlanejadorDeRotaTests
     private static DemandaDeRota Demanda(Guid categoria, int ordem = 0) => new(Guid.NewGuid(), categoria, ordem);
 
     [Fact]
+    public void Local_marcado_pelo_usuario_vale_mais_que_a_categoria()
+    {
+        var loja = NovaLoja();
+        var daCategoria = NovaSecao(loja, "Bebidas", new AreaDoMapa(3, 12, 6, 2));
+        var ondeAchou = NovaSecao(loja, "Ponta", new AreaDoMapa(18, 2, 6, 2));
+        var demanda = new DemandaDeRota(Guid.NewGuid(), Mercearia, 0, [new LocalProprio(ondeAchou.Id, LadoDaSecaoEnum.A)]);
+
+        var plano = PlanejadorDeRota.Planejar(loja, [daCategoria, ondeAchou], [Vinculo(loja, daCategoria, Mercearia)], [demanda], new PontoDoMapa(4, 15), true);
+
+        Assert.Equal(ondeAchou.Id, Assert.Single(plano.Paradas).SecaoId);
+    }
+
+    [Fact]
+    public void Item_com_dois_locais_proprios_vai_ao_mais_proximo_e_sem_categoria_ainda_entra_na_rota()
+    {
+        var loja = NovaLoja();
+        var perto = NovaSecao(loja, "Perto", new AreaDoMapa(3, 12, 6, 2));
+        var longe = NovaSecao(loja, "Longe", new AreaDoMapa(18, 2, 6, 2));
+        var demanda = new DemandaDeRota(Guid.NewGuid(), null, 0, [new LocalProprio(perto.Id, LadoDaSecaoEnum.A), new LocalProprio(longe.Id, LadoDaSecaoEnum.A)]);
+
+        var plano = PlanejadorDeRota.Planejar(loja, [perto, longe], [], [demanda], new PontoDoMapa(4, 15), true);
+
+        Assert.Equal(perto.Id, Assert.Single(plano.Paradas).SecaoId);
+        Assert.Empty(plano.ItensSemLocal);
+    }
+
+    [Fact]
+    public void Local_proprio_de_secao_que_nao_existe_mais_cai_na_categoria()
+    {
+        var loja = NovaLoja();
+        var daCategoria = NovaSecao(loja, "Bebidas", new AreaDoMapa(3, 12, 6, 2));
+        var demanda = new DemandaDeRota(Guid.NewGuid(), Mercearia, 0, [new LocalProprio(Guid.NewGuid(), LadoDaSecaoEnum.A)]);
+
+        var plano = PlanejadorDeRota.Planejar(loja, [daCategoria], [Vinculo(loja, daCategoria, Mercearia)], [demanda], new PontoDoMapa(4, 15), true);
+
+        Assert.Equal(daCategoria.Id, Assert.Single(plano.Paradas).SecaoId);
+    }
+
+    [Fact]
     public void Gondola_de_dois_lados_para_no_corredor_do_lado_do_item()
     {
         var loja = NovaLoja();

@@ -74,6 +74,7 @@ public sealed class CriarLoja
 
         var secoes = new List<Secao>();
         var vinculos = new List<SecaoCategoria>();
+        var locais = new List<LocalDoProduto>();
         Loja loja;
 
         if (requisicao.CopiarDeLojaId is { } origemId)
@@ -90,6 +91,7 @@ public sealed class CriarLoja
             }
 
             foreach (var v in await _lojas.ListarVinculosAsync(grupoId, origemId, ct)) vinculos.Add(SecaoCategoria.Criar(Guid.CreateVersion7(), novasIds[v.SecaoId], loja.Id, grupoId, v.CategoriaId, v.Lado));
+            foreach (var l in await _lojas.ListarLocaisDeProdutosAsync(grupoId, origemId, ct)) locais.Add(LocalDoProduto.Criar(Guid.CreateVersion7(), grupoId, loja.Id, l.Chave, novasIds[l.SecaoId], l.Lado));
         }
         else
         {
@@ -98,6 +100,7 @@ public sealed class CriarLoja
 
         await _lojas.AdicionarAsync(loja, ct);
         await _lojas.AdicionarMapaAsync(secoes, vinculos, ct);
+        await _lojas.AdicionarLocaisAsync(locais, ct);
         await _unidade.SalvarAsync(ct);
         return loja.ParaResposta(secoes, vinculos);
     }
@@ -146,7 +149,26 @@ public sealed class SalvarMapaDaLoja
             foreach (var categoriaId in pedido.CategoriasLadoB ?? []) vinculos.Add(SecaoCategoria.Criar(Guid.CreateVersion7(), secao.Id, id, grupoId, categoriaId, LadoDaSecaoEnum.B));
         }
 
-        _lojas.RemoverMapa(await _lojas.ListarSecoesAsync(grupoId, id, ct), await _lojas.ListarVinculosAsync(grupoId, id, ct));
+        var antigas = await _lojas.ListarSecoesAsync(grupoId, id, ct);
+
+        // As seções saem e voltam com ids novas; o local que o usuário marcou para um produto acompanha a seção
+        // que continua no mapa (o app manda o id anterior). Se a seção sumiu ou perdeu o lado B, o local sai.
+        var novaPorAntiga = new Dictionary<Guid, Secao>();
+        for (var i = 0; i < requisicao.Secoes.Count; i++)
+        {
+            if (requisicao.Secoes[i].IdAnterior is { } anterior && antigas.Any(a => a.Id == anterior)) novaPorAntiga.TryAdd(anterior, secoes[i]);
+        }
+
+        var locais = await _lojas.ListarLocaisDeProdutosAsync(grupoId, id, ct);
+        var descartados = new List<LocalDoProduto>();
+        foreach (var local in locais)
+        {
+            if (novaPorAntiga.TryGetValue(local.SecaoId, out var nova) && (nova.Dividida || local.Lado == LadoDaSecaoEnum.A)) local.MoverParaSecao(nova.Id);
+            else descartados.Add(local);
+        }
+
+        _lojas.RemoverLocais(descartados);
+        _lojas.RemoverMapa(antigas, await _lojas.ListarVinculosAsync(grupoId, id, ct));
         loja.DefinirMapa(nome, requisicao.Largura, requisicao.Altura, new PontoDoMapa(requisicao.Entrada.X, requisicao.Entrada.Y), requisicao.Caixas.ParaArea());
         await _lojas.AdicionarMapaAsync(secoes, vinculos, ct);
         await _unidade.SalvarAsync(ct);

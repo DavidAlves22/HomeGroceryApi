@@ -18,7 +18,8 @@ public sealed record SecaoRequisicao(
     bool Dividida,
     AreaDto Area,
     IReadOnlyList<Guid>? CategoriasLadoA = null,
-    IReadOnlyList<Guid>? CategoriasLadoB = null);
+    IReadOnlyList<Guid>? CategoriasLadoB = null,
+    Guid? IdAnterior = null);
 
 public sealed record SalvarMapaRequisicao(string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoRequisicao> Secoes, int Versao);
 
@@ -34,6 +35,14 @@ public sealed record SecaoResposta(
 public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao);
 
 public sealed record LojaResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoResposta> Secoes, int Versao);
+
+public sealed record LocalDoProdutoRequisicao(Guid SecaoId, LadoDaSecaoEnum Lado);
+
+/// <summary>Onde o produto do item foi achado neste mercado. Lista vazia = volta a valer a categoria da seção.</summary>
+public sealed record DefinirLocalDoItemRequisicao(Guid LojaId, IReadOnlyList<LocalDoProdutoRequisicao> Locais);
+
+/// <summary>Lugar que o usuário marcou para o produto do item (o item é identificado pelo nome na lista).</summary>
+public sealed record LocalDoItemResposta(Guid ItemId, Guid SecaoId, LadoDaSecaoEnum Lado);
 
 public sealed record RotaRequisicao(Guid LojaId, PontoDto? Posicao = null);
 
@@ -58,4 +67,5 @@ public sealed record RotaResposta(
     int EconomiaEmMetros,
     int TempoEstimadoEmMinutos,
     IReadOnlyList<ItemForaDaRotaResposta> ForaDaRota,
-    int JaCompradosEmOutrosMercados);
+    int JaCompradosEmOutrosMercados,
+    IReadOnlyList<LocalDoItemResposta> LocaisProprios);

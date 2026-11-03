@@ -24,6 +24,7 @@ public sealed class HomeGroceryDbContext : IdentityDbContext<ApplicationUser, Id
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Secao> Secoes => Set<Secao>();
     public DbSet<SecaoCategoria> SecaoCategorias => Set<SecaoCategoria>();
+    public DbSet<LocalDoProduto> LocaisDoProduto => Set<LocalDoProduto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -171,6 +171,7 @@ public sealed class UnidadeDeTrabalho : IUnidadeDeTrabalho
         {
             Loja l => (Guid?)l.GrupoId,
             Secao s => s.GrupoId,
+            LocalDoProduto local => local.GrupoId,
             _ => null,
         }).Where(g => g.HasValue).Select(g => g!.Value).Distinct();
         foreach (var grupoId in gruposDosMapas) avisos.Add(new Aviso(grupoId, null, new EventoDeAlteracao(EventoDeAlteracao.Lojas)));

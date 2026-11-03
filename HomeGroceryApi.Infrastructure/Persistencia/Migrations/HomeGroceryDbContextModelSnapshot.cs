@@ -290,6 +290,42 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.ToTable("listas_de_compras", (string)null);
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.LocalDoProduto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Chave")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Lado")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("character varying(1)");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SecaoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SecaoId");
+
+                    b.HasIndex("GrupoId", "LojaId");
+
+                    b.HasIndex("LojaId", "Chave", "SecaoId", "Lado")
+                        .IsUnique();
+
+                    b.ToTable("locais_do_produto", (string)null);
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Loja", b =>
                 {
                     b.Property<Guid>("Id")
@@ -775,6 +811,21 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
                         .WithMany()
                         .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.LocalDoProduto", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Secao", null)
+                        .WithMany()
+                        .HasForeignKey("SecaoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

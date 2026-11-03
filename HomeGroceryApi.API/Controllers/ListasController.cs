@@ -73,6 +73,12 @@ public sealed class ListasController : ControllerBase
         return Ok(await casoDeUso.ExecutarAsync(id, itemId, requisicao, ct));
     }
 
+    [HttpPut("{id:guid}/itens/{itemId:guid}/local")]
+    public async Task<ActionResult<IReadOnlyList<LocalDoItemResposta>>> DefinirLocal(Guid id, Guid itemId, [FromBody] DefinirLocalDoItemRequisicao requisicao, [FromServices] DefinirLocalDoItem casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, itemId, requisicao, ct));
+    }
+
     [HttpPut("{id:guid}/itens/{itemId:guid}/sem-na-loja")]
     public async Task<ActionResult<ItemDaListaResposta>> MarcarSemNaLoja(Guid id, Guid itemId, [FromBody] SemNaLojaRequisicao requisicao, [FromServices] MarcarItemSemNaLoja casoDeUso, CancellationToken ct)
     {

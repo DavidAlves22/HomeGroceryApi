@@ -11,6 +11,9 @@ public interface ILojaRepository
     Task<Dictionary<Guid, int>> ContarSecoesAsync(Guid grupoId, CancellationToken ct);
     Task<List<Secao>> ListarSecoesAsync(Guid grupoId, Guid lojaId, CancellationToken ct);
     Task<List<SecaoCategoria>> ListarVinculosAsync(Guid grupoId, Guid lojaId, CancellationToken ct);
+    Task<List<LocalDoProduto>> ListarLocaisDeProdutosAsync(Guid grupoId, Guid lojaId, CancellationToken ct);
+    Task AdicionarLocaisAsync(IEnumerable<LocalDoProduto> locais, CancellationToken ct);
+    void RemoverLocais(IEnumerable<LocalDoProduto> locais);
     Task AdicionarAsync(Loja loja, CancellationToken ct);
     Task AdicionarMapaAsync(IEnumerable<Secao> secoes, IEnumerable<SecaoCategoria> vinculos, CancellationToken ct);
     void RemoverMapa(IEnumerable<Secao> secoes, IEnumerable<SecaoCategoria> vinculos);

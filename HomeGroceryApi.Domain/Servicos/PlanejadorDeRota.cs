@@ -4,8 +4,11 @@ using HomeGroceryApi.Domain.ObjetosDeValor;
 
 namespace HomeGroceryApi.Domain.Servicos;
 
+/// <summary>Lugar do mapa em que o usuário achou o produto (vale mais que a categoria da seção).</summary>
+public sealed record LocalProprio(Guid SecaoId, LadoDaSecaoEnum Lado);
+
 /// <summary>Um item que ainda falta comprar. CategoriaId vazio (categoria apagada) cai em "sem local".</summary>
-public sealed record DemandaDeRota(Guid ItemId, Guid? CategoriaId, int OrdemDaCategoria);
+public sealed record DemandaDeRota(Guid ItemId, Guid? CategoriaId, int OrdemDaCategoria, IReadOnlyList<LocalProprio>? LocaisProprios = null);
 
 public sealed record ParadaDaRota(Guid SecaoId, LadoDaSecaoEnum? Lado, PontoDoMapa Posicao, double Distancia, IReadOnlyList<Guid> ItensIds);
 
@@ -36,27 +39,45 @@ public static class PlanejadorDeRota
         var atual = inicio.X < 0 || inicio.Y < 0 || inicio.X >= largura || inicio.Y >= altura || bloqueado[inicio.Y * largura + inicio.X] ? loja.Entrada : inicio;
         var secoesPorId = secoes.ToDictionary(s => s.Id);
 
-        var locaisPorCategoria = vinculos
+        var locaisPorGrupo = vinculos
             .Where(v => secoesPorId.ContainsKey(v.SecaoId))
             .GroupBy(v => v.CategoriaId)
             .ToDictionary(g => g.Key, g => g.Select(v => new Lugar(secoesPorId[v.SecaoId], secoesPorId[v.SecaoId].Dividida ? v.Lado : null)).Distinct().ToList());
 
+        // Cada "grupo" é um conjunto de itens que vão ao mesmo lugar: a categoria (ids de categoria) ou, quando o
+        // usuário marcou onde achou o produto, o próprio item (id do item). O local do usuário vale mais que a categoria.
         var semLocal = new List<Guid>();
-        var porCategoria = new Dictionary<Guid, (int Ordem, List<Guid> Itens)>();
+        var porGrupo = new Dictionary<Guid, (int Ordem, List<Guid> Itens)>();
         foreach (var demanda in demandas)
         {
-            if (demanda.CategoriaId is not { } categoria || !locaisPorCategoria.ContainsKey(categoria))
+            var proprios = (demanda.LocaisProprios ?? [])
+                .Where(l => secoesPorId.ContainsKey(l.SecaoId))
+                .Select(l => new Lugar(secoesPorId[l.SecaoId], secoesPorId[l.SecaoId].Dividida ? l.Lado : null))
+                .Distinct()
+                .ToList();
+
+            Guid chave;
+            if (proprios.Count > 0)
+            {
+                chave = demanda.ItemId;
+                locaisPorGrupo[chave] = proprios;
+            }
+            else if (demanda.CategoriaId is { } categoria && locaisPorGrupo.ContainsKey(categoria))
+            {
+                chave = categoria;
+            }
+            else
             {
                 semLocal.Add(demanda.ItemId);
                 continue;
             }
 
-            if (!porCategoria.TryGetValue(categoria, out var grupo)) porCategoria[categoria] = grupo = (demanda.OrdemDaCategoria, []);
+            if (!porGrupo.TryGetValue(chave, out var grupo)) porGrupo[chave] = grupo = (demanda.OrdemDaCategoria, []);
             grupo.Itens.Add(demanda.ItemId);
         }
 
-        var categorias = porCategoria.Keys.ToList();
-        if (!otimizar) categorias = categorias.OrderBy(c => porCategoria[c].Ordem).ToList();
+        var categorias = porGrupo.Keys.ToList();
+        if (!otimizar) categorias = categorias.OrderBy(c => porGrupo[c].Ordem).ToList();
 
         var paradas = new List<ParadaDaRota>();
         var pontos = new List<PontoDoMapa> { atual };
@@ -71,7 +92,7 @@ public static class PlanejadorDeRota
             // Cada categoria pode estar em vários lugares: vale o mais perto de quem anda.
             foreach (var categoria in alvo)
             {
-                foreach (var lugar in locaisPorCategoria[categoria])
+                foreach (var lugar in locaisPorGrupo[categoria])
                 {
                     var parada = MelhorParada(lugar.Secao.Area, lugar.Lado, bloqueado, largura, altura, dist);
                     if (parada is { } p && (melhor is null || p.Distancia < melhor.Value.Distancia)) melhor = (categoria, lugar, p.Ponto, p.Distancia);
@@ -80,19 +101,19 @@ public static class PlanejadorDeRota
 
             if (melhor is not { } escolhido)
             {
-                foreach (var categoria in alvo) semLocal.AddRange(porCategoria[categoria].Itens);
+                foreach (var categoria in alvo) semLocal.AddRange(porGrupo[categoria].Itens);
                 categorias.RemoveAll(alvo.Contains);
                 continue;
             }
 
             // Na rota otimizada, numa parada também se pega as outras categorias que moram no mesmo lugar.
-            var juntas = otimizar ? categorias.Where(c => locaisPorCategoria[c].Contains(escolhido.Lugar)).ToList() : new List<Guid> { escolhido.Categoria };
+            var juntas = otimizar ? categorias.Where(c => locaisPorGrupo[c].Contains(escolhido.Lugar)).ToList() : new List<Guid> { escolhido.Categoria };
             categorias.RemoveAll(juntas.Contains);
 
             pontos.AddRange(Caminho(anterior, largura, atual, escolhido.Ponto).Skip(1));
             distancia += escolhido.Distancia;
             atual = escolhido.Ponto;
-            paradas.Add(new ParadaDaRota(escolhido.Lugar.Secao.Id, escolhido.Lugar.Lado, atual, escolhido.Distancia, juntas.SelectMany(c => porCategoria[c].Itens).ToList()));
+            paradas.Add(new ParadaDaRota(escolhido.Lugar.Secao.Id, escolhido.Lugar.Lado, atual, escolhido.Distancia, juntas.SelectMany(c => porGrupo[c].Itens).ToList()));
         }
 
         if (paradas.Count > 0)

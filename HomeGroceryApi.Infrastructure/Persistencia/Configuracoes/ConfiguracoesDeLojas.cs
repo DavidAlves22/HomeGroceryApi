@@ -48,3 +48,19 @@ public sealed class SecaoCategoriaConfiguracao : IEntityTypeConfiguration<SecaoC
         builder.HasIndex(v => new { v.GrupoId, v.LojaId });
     }
 }
+
+public sealed class LocalDoProdutoConfiguracao : IEntityTypeConfiguration<LocalDoProduto>
+{
+    public void Configure(EntityTypeBuilder<LocalDoProduto> builder)
+    {
+        builder.ToTable("locais_do_produto");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Id).ValueGeneratedNever();
+        builder.Property(l => l.Chave).HasMaxLength(200).IsRequired();
+        builder.Property(l => l.Lado).HasConversion<string>().HasMaxLength(1);
+        builder.HasOne<Loja>().WithMany().HasForeignKey(l => l.LojaId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Secao>().WithMany().HasForeignKey(l => l.SecaoId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(l => new { l.LojaId, l.Chave, l.SecaoId, l.Lado }).IsUnique();
+        builder.HasIndex(l => new { l.GrupoId, l.LojaId });
+    }
+}

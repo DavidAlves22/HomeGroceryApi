@@ -75,7 +75,8 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - **Categoria em vários lugares**: NÃO há unicidade por loja+categoria; só não repete no mesmo lado da mesma seção. A rota vai ao lugar mais próximo.
 - **Compra dividida**: `ItemDaLista.CompradoNaLojaId` (enviado em `PUT .../comprado` com `lojaId`) e `LojasSemOItem` ("Não tem aqui", `PUT .../sem-na-loja`; continua pendente). Desmarcar limpa o mercado.
 - **Rota** (`POST /listas/{id}/rota` com `lojaId` e posição opcional): só itens NÃO comprados e que não estão em `LojasSemOItem` desse mercado. Sem seção para a categoria → `foraDaRota` ("SemSecao"); marcados "Não tem aqui" → "NaoTemNaLoja". Algoritmo em `Domain/Servicos/PlanejadorDeRota` (Dijkstra 8 direções, sem cortar quina, vizinho mais próximo); a economia compara com seguir a ordem das categorias. Sem GPS: a posição vem do app (último item marcado).
-- Tempo real: mudança em loja/seção avisa o grupo com o evento `lojas`.
+- **Local do produto** (`LocalDoProduto`, `PUT /listas/{id}/itens/{itemId}/local`): onde o produto foi achado num mercado. Chave = nome normalizado (`AnaliseDeCompras.Normalizar`), então vale para o grupo e para listas futuras. Até 5 locais por produto+mercado (a rota vai ao mais perto); lista vazia apaga. Vence a categoria da seção: no planejador, o item com local próprio vira um grupo só dele (chave = id do item). Como o mapa é salvo por inteiro, `SecaoRequisicao.IdAnterior` faz o local acompanhar a seção que continua (sem ele, o local é descartado). `POST /lojas` com cópia leva os locais junto. A rota devolve `locaisProprios`.
+- Tempo real: mudança em loja/seção/local do produto avisa o grupo com o evento `lojas`.
 - `LojasSemOItem` é `uuid[]`: o domínio troca o array inteiro para o EF perceber a mudança.
 
 ## Publicação
