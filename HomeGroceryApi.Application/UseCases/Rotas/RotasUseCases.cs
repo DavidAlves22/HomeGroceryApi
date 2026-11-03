@@ -95,7 +95,7 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
 /// </summary>
 public sealed class DefinirLocalDoItem : CasoDeUsoDeLista
 {
-    private const int MaximoDeLocais = 5;
+    private const int MaximoDeLocais = 1;
 
     private readonly ILojaRepository _lojas;
     private readonly IUnidadeDeTrabalho _unidade;
@@ -116,7 +116,7 @@ public sealed class DefinirLocalDoItem : CasoDeUsoDeLista
         if (loja is null || loja.ExcluidoEm is not null) throw new ErroDeValidacao("Escolha um mercado válido.");
 
         var pedidos = (requisicao.Locais ?? []).Distinct().ToList();
-        if (pedidos.Count > MaximoDeLocais) throw new ErroDeValidacao($"Um produto pode ter no máximo {MaximoDeLocais} locais por mercado.");
+        if (pedidos.Count > MaximoDeLocais) throw new ErroDeValidacao("Um produto tem um único local por mercado.");
 
         var secoes = (await _lojas.ListarSecoesAsync(grupoId, loja.Id, ct)).ToDictionary(s => s.Id);
         foreach (var pedido in pedidos)
