@@ -22,6 +22,12 @@ public sealed class ListaDeCompras
     /// <summary>Total efetivamente gasto, congelado no momento em que a compra é finalizada.</summary>
     public decimal? TotalGastoFinal { get; private set; }
 
+    /// <summary>
+    /// Quem pega cada categoria nesta ida ao mercado (categoria -> usuario). Categoria fora do mapa = de todos.
+    /// Vale so para esta lista: a proxima compra comeca sem divisao.
+    /// </summary>
+    public Dictionary<Guid, Guid> ResponsaveisPorCategoria { get; private set; } = [];
+
     private ListaDeCompras()
     {
     }
@@ -36,6 +42,20 @@ public sealed class ListaDeCompras
     public void GarantirEditavel()
     {
         if (Finalizada) throw new ErroDeDominio("Esta lista já foi finalizada. Reabra a lista para alterá-la.");
+    }
+
+    /// <summary>Troca a divisao inteira; mapa vazio desfaz a divisao.</summary>
+    public void DefinirDivisao(IReadOnlyDictionary<Guid, Guid> responsaveis)
+    {
+        GarantirEditavel();
+        // Troca o dicionario inteiro (em vez de mexer nele) para o EF perceber a alteracao.
+        ResponsaveisPorCategoria = new Dictionary<Guid, Guid>(responsaveis);
+    }
+
+    /// <summary>Cancelar apaga a lista; uma compra já finalizada é histórico e não pode ser cancelada.</summary>
+    public void GarantirCancelavel()
+    {
+        if (Finalizada) throw new ErroDeDominio("Só é possível cancelar uma compra em andamento.");
     }
 
     public void Finalizar(DateTime agora, decimal totalGasto)

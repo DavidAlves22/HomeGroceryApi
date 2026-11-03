@@ -181,4 +181,10 @@ public sealed class ListaRepository : IListaRepository
     {
         _contexto.ItensDasListas.Remove(item);
     }
+
+    public void RemoverLista(ListaDeCompras lista, IEnumerable<ItemDaLista> itens)
+    {
+        _contexto.ItensDasListas.RemoveRange(itens);
+        _contexto.Listas.Remove(lista);
+    }
 }

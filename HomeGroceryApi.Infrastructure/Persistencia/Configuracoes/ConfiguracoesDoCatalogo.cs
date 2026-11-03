@@ -48,6 +48,18 @@ public sealed class ListaDeComprasConfiguracao : IEntityTypeConfiguration<ListaD
         builder.Property(l => l.Nome).HasMaxLength(120).IsRequired();
         builder.Property(l => l.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(l => l.TotalGastoFinal).HasPrecision(12, 2);
+        builder.Property(l => l.ResponsaveisPorCategoria)
+            .HasConversion(
+                d => System.Text.Json.JsonSerializer.Serialize(d, (System.Text.Json.JsonSerializerOptions?)null),
+                t => System.Text.Json.JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(t, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<Guid, Guid>(),
+                new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<Dictionary<Guid, Guid>>(
+                    (a, b) => a!.Count == b!.Count && !a.Except(b).Any(),
+                    d => d.Aggregate(0, (h, kv) => HashCode.Combine(h, kv.Key, kv.Value)),
+                    d => new Dictionary<Guid, Guid>(d)))
+            .HasColumnName("Divisao")
+            .HasColumnType("text")
+            .HasDefaultValue(new Dictionary<Guid, Guid>())
+            .IsRequired();
         builder.HasOne<Grupo>().WithMany().HasForeignKey(l => l.GrupoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(l => new { l.GrupoId, l.Competencia });
 

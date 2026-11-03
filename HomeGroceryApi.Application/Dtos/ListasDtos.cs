@@ -62,4 +62,10 @@ public sealed record TotaisPorCategoriaResposta(string Categoria, decimal Estima
 
 public sealed record TotaisResposta(decimal Estimado, decimal Realizado, decimal Restante, int Itens, int Comprados, int CompradosSemPreco, IReadOnlyList<TotaisPorCategoriaResposta> PorCategoria);
 
-public sealed record ListaResposta(ListaResumoResposta Resumo, IReadOnlyList<ItemDaListaResposta> Itens, TotaisResposta Totais);
+/// <summary>Quem pega a categoria nesta ida ao mercado.</summary>
+public sealed record DivisaoDaCategoriaResposta(Guid CategoriaId, Guid UsuarioId);
+
+public sealed record ListaResposta(ListaResumoResposta Resumo, IReadOnlyList<ItemDaListaResposta> Itens, TotaisResposta Totais, IReadOnlyList<DivisaoDaCategoriaResposta> Divisao);
+
+/// <summary>Substitui a divisao inteira; lista vazia desfaz. Categoria que nao aparece e de todos.</summary>
+public sealed record DividirCompraRequisicao(IReadOnlyList<DivisaoDaCategoriaResposta>? Atribuicoes);

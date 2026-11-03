@@ -182,6 +182,28 @@ public class FluxosPrincipaisTests
     }
 
     [PostgresFact]
+    public async Task Cancelar_apaga_a_lista_em_andamento_do_historico_e_recusa_finalizada_e_de_outro_grupo()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var intruso = await _api.NovoUsuarioAsync();
+        await AdicionarAoModeloAsync(u, "Arroz", "Mercearia");
+        var lista = await CriarListaAsync(u, "2026-12");
+        var listaId = lista.GetProperty("resumo").GetProperty("id").GetGuid();
+
+        Assert.Equal(404, (await intruso.DeleteAsync($"/listas/{listaId}")).Status);
+        Assert.Equal(204, (await u.DeleteAsync($"/listas/{listaId}")).Status);
+        Assert.Equal(404, (await u.GetAsync($"/listas/{listaId}")).Status);
+        Assert.Equal(0, (await u.GetAsync("/listas")).Corpo.GetArrayLength());
+        Assert.Equal(1, (await u.GetAsync("/modelo/itens")).Corpo.GetArrayLength());
+
+        // Depois de cancelar, o mês pode ser iniciado de novo como principal.
+        var recriada = await CriarListaAsync(u, "2026-12");
+        var novaId = recriada.GetProperty("resumo").GetProperty("id").GetGuid();
+        await u.PostAsync($"/listas/{novaId}/finalizar");
+        Assert.Equal(422, (await u.DeleteAsync($"/listas/{novaId}")).Status);
+    }
+
+    [PostgresFact]
     public async Task Usuario_nao_enxerga_nem_altera_dados_de_outro_grupo()
     {
         var dona = await _api.NovoUsuarioAsync();

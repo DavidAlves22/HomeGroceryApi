@@ -344,6 +344,65 @@ public sealed class ReabrirLista : CasoDeUsoDeLista
 }
 
 /// <summary>
+/// Cancela a compra em andamento: apaga a lista e os itens de vez (some da aba Lista e do histórico),
+/// como se o mês nunca tivesse sido iniciado. Produtos, categorias e lista padrão não são tocados.
+/// </summary>
+public sealed class CancelarLista : CasoDeUsoDeLista
+{
+    private readonly IUnidadeDeTrabalho _unidade;
+
+    public CancelarLista(IListaRepository listas, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario) : base(listas, usuario)
+    {
+        _unidade = unidade;
+    }
+
+    public async Task ExecutarAsync(Guid listaId, CancellationToken ct)
+    {
+        var lista = await ObterListaAsync(listaId, ct);
+        lista.GarantirCancelavel();
+        Listas.RemoverLista(lista, await Listas.ListarItensAsync(Usuario.GrupoId, listaId, ct));
+        await _unidade.SalvarAsync(ct);
+    }
+}
+
+/// <summary>
+/// "Quem pega o que" nesta ida ao mercado: cada categoria vai para uma pessoa do grupo (as que nao aparecem
+/// sao de todos). Vale so para esta lista e e trocada por inteiro a cada chamada.
+/// </summary>
+public sealed class DividirCompra : CasoDeUsoDeLista
+{
+    private readonly ICategoriaRepository _categorias;
+    private readonly IGrupoRepository _grupos;
+    private readonly IUnidadeDeTrabalho _unidade;
+
+    public DividirCompra(IListaRepository listas, ICategoriaRepository categorias, IGrupoRepository grupos, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario) : base(listas, usuario)
+    {
+        _categorias = categorias;
+        _grupos = grupos;
+        _unidade = unidade;
+    }
+
+    public async Task<IReadOnlyList<DivisaoDaCategoriaResposta>> ExecutarAsync(Guid listaId, DividirCompraRequisicao requisicao, CancellationToken ct)
+    {
+        var lista = await ObterListaAsync(listaId, ct);
+        var pedidos = requisicao.Atribuicoes ?? [];
+        if (pedidos.Select(p => p.CategoriaId).Distinct().Count() != pedidos.Count) throw new ErroDeValidacao("Cada categoria só pode ter uma pessoa responsável.");
+
+        var categorias = (await _categorias.ListarAsync(Usuario.GrupoId, true, ct)).Select(c => c.Id).ToHashSet();
+        var membros = (await _grupos.ListarMembrosAsync(Usuario.GrupoId, ct)).Select(m => m.UsuarioId).ToHashSet();
+        foreach (var pedido in pedidos)
+        {
+            if (!categorias.Contains(pedido.CategoriaId)) throw new ErroDeValidacao("Escolha categorias do seu grupo.");
+            if (!membros.Contains(pedido.UsuarioId)) throw new ErroDeValidacao("A pessoa escolhida não faz parte do grupo.");
+        }
+
+        lista.DefinirDivisao(pedidos.ToDictionary(p => p.CategoriaId, p => p.UsuarioId));
+        await _unidade.SalvarAsync(ct);
+        return pedidos;
+    }
+}
+
+/// <summary>
 /// Ordem manual dos produtos da lista (por exemplo, na ordem dos corredores do mercado).
 /// </summary>
 public sealed class ReordenarItensDaLista : CasoDeUsoDeLista

@@ -20,17 +20,19 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
 {
     private readonly ILojaRepository _lojas;
     private readonly ICategoriaRepository _categorias;
+    private readonly IGrupoRepository _grupos;
 
-    public PlanejarRotaDaLista(IListaRepository listas, ILojaRepository lojas, ICategoriaRepository categorias, IUsuarioAtual usuario) : base(listas, usuario)
+    public PlanejarRotaDaLista(IListaRepository listas, ILojaRepository lojas, ICategoriaRepository categorias, IGrupoRepository grupos, IUsuarioAtual usuario) : base(listas, usuario)
     {
         _lojas = lojas;
         _categorias = categorias;
+        _grupos = grupos;
     }
 
     public async Task<RotaResposta> ExecutarAsync(Guid listaId, RotaRequisicao requisicao, CancellationToken ct)
     {
         var grupoId = Usuario.GrupoId;
-        await ObterListaAsync(listaId, ct);
+        var lista = await ObterListaAsync(listaId, ct);
 
         var loja = await _lojas.ObterAsync(grupoId, requisicao.LojaId, ct);
         if (loja is null || loja.ExcluidoEm is not null) throw new ErroDeNaoEncontrado("Mercado não encontrado.");
@@ -42,7 +44,14 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
 
         var locaisPorProduto = (await _lojas.ListarLocaisDeProdutosAsync(grupoId, loja.Id, ct)).GroupBy(l => l.Chave).ToDictionary(g => g.Key, g => g.Select(l => new LocalProprio(l.SecaoId, l.Lado)).ToList());
 
-        var pendentes = itens.Where(i => !i.Comprado && !i.LojasSemOItem.Contains(loja.Id)).ToList();
+        // Divisao da compra: com uma pessoa escolhida, sai da rota o que outra pessoa do grupo vai pegar.
+        // Responsavel que ja nao e membro do grupo deixa a categoria de todos (nada some da rota de ninguem).
+        var membros = (await _grupos.ListarMembrosAsync(grupoId, ct)).Select(m => m.UsuarioId).ToHashSet();
+        Guid? ResponsavelDe(ItemDaLista i) => i.CategoriaId is { } c && lista.ResponsaveisPorCategoria.TryGetValue(c, out var u) && membros.Contains(u) ? u : null;
+        var deOutraPessoa = requisicao.UsuarioId is { } quem ? itens.Where(i => !i.Comprado && ResponsavelDe(i) is { } r && r != quem).ToList() : [];
+        var idsDeOutraPessoa = deOutraPessoa.Select(i => i.Id).ToHashSet();
+
+        var pendentes = itens.Where(i => !i.Comprado && !i.LojasSemOItem.Contains(loja.Id) && !idsDeOutraPessoa.Contains(i.Id)).ToList();
         var demandas = pendentes.Select(i => new DemandaDeRota(i.Id, i.CategoriaId, i.CategoriaId is { } c && ordemDaCategoria.TryGetValue(c, out var ordem) ? ordem : int.MaxValue, locaisPorProduto.GetValueOrDefault(AnaliseDeCompras.Normalizar(i.NomeSnapshot)))).ToList();
         // O app mostra "local que você marcou" e usa isto para trocar ou apagar o local.
         var locaisDosItens = pendentes
@@ -64,7 +73,7 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
             .ToList();
 
         var fora = plano.ItensSemLocal.Select(id => new ItemForaDaRotaResposta(itensPorId[id].ParaResposta(), "SemSecao"))
-            .Concat(itens.Where(i => !i.Comprado && i.LojasSemOItem.Contains(loja.Id)).Select(i => new ItemForaDaRotaResposta(i.ParaResposta(), "NaoTemNaLoja")))
+            .Concat(itens.Where(i => !i.Comprado && i.LojasSemOItem.Contains(loja.Id) && !idsDeOutraPessoa.Contains(i.Id)).Select(i => new ItemForaDaRotaResposta(i.ParaResposta(), "NaoTemNaLoja")))
             .ToList();
 
         var distancia = Metros(plano.Distancia);
@@ -72,7 +81,8 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
         return new RotaResposta(
             loja.Id, inicio.ParaDto(), paradas, plano.Trilha.Select(t => t.ParaDto()).ToList(), distancia, Math.Max(0, Metros(seguindoALista.Distancia) - distancia), tempo, fora,
             itens.Count(i => i.Comprado && i.CompradoNaLojaId != loja.Id),
-            locaisDosItens);
+            locaisDosItens,
+            deOutraPessoa.Select(i => new ItemDeOutraPessoaResposta(i.ParaResposta(), ResponsavelDe(i)!.Value)).ToList());
     }
 
     private static int Metros(double celulas) => (int)Math.Round(celulas * PlanejadorDeRota.MetrosPorCelula);

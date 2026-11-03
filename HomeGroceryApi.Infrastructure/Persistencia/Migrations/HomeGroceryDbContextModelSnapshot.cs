@@ -271,6 +271,13 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.Property<bool>("Principal")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ResponsaveisPorCategoria")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}")
+                        .HasColumnName("Divisao");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)

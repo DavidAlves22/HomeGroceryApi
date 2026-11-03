@@ -145,6 +145,6 @@ public static class Mapeamentos
     public static ListaResposta ParaListaResposta(this ListaDeCompras lista, IReadOnlyList<ItemDaLista> itens)
     {
         var ordenados = itens.OrderBy(i => i.Ordem).ToList();
-        return new ListaResposta(lista.ParaResumo(ordenados).ParaResposta(), ordenados.Select(i => i.ParaResposta()).ToList(), CalculoDeTotais.Calcular(ordenados).ParaResposta());
+        return new ListaResposta(lista.ParaResumo(ordenados).ParaResposta(), ordenados.Select(i => i.ParaResposta()).ToList(), CalculoDeTotais.Calcular(ordenados).ParaResposta(), lista.ResponsaveisPorCategoria.Select(r => new DivisaoDaCategoriaResposta(r.Key, r.Value)).ToList());
     }
 }

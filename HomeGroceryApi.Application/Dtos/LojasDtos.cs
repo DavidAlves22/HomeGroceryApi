@@ -44,7 +44,8 @@ public sealed record DefinirLocalDoItemRequisicao(Guid LojaId, IReadOnlyList<Loc
 /// <summary>Lugar que o usuário marcou para o produto do item (o item é identificado pelo nome na lista).</summary>
 public sealed record LocalDoItemResposta(Guid ItemId, Guid SecaoId, LadoDaSecaoEnum Lado);
 
-public sealed record RotaRequisicao(Guid LojaId, PontoDto? Posicao = null);
+/// <summary>`UsuarioId`: rota so dessa pessoa (itens das categorias dela + os de todos). Ausente = rota de todos.</summary>
+public sealed record RotaRequisicao(Guid LojaId, PontoDto? Posicao = null, Guid? UsuarioId = null);
 
 public sealed record ParadaResposta(
     Guid SecaoId,
@@ -58,6 +59,9 @@ public sealed record ParadaResposta(
 /// <summary>Motivo: "SemSecao" (o mercado não tem lugar para a categoria) ou "NaoTemNaLoja" (marcado como "Não tem aqui").</summary>
 public sealed record ItemForaDaRotaResposta(ItemDaListaResposta Item, string Motivo);
 
+/// <summary>Item pendente que ficou de fora da rota porque outra pessoa vai pegar.</summary>
+public sealed record ItemDeOutraPessoaResposta(ItemDaListaResposta Item, Guid UsuarioId);
+
 public sealed record RotaResposta(
     Guid LojaId,
     PontoDto Posicao,
@@ -68,4 +72,5 @@ public sealed record RotaResposta(
     int TempoEstimadoEmMinutos,
     IReadOnlyList<ItemForaDaRotaResposta> ForaDaRota,
     int JaCompradosEmOutrosMercados,
-    IReadOnlyList<LocalDoItemResposta> LocaisProprios);
+    IReadOnlyList<LocalDoItemResposta> LocaisProprios,
+    IReadOnlyList<ItemDeOutraPessoaResposta> ComOutrasPessoas);

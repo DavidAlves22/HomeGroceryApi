@@ -166,6 +166,67 @@ public class MapasEComprasDivididasTests
     }
 
     [PostgresFact]
+    public async Task Divisao_por_categoria_tira_da_rota_o_que_outra_pessoa_pega_e_o_resto_fica_para_todos()
+    {
+        var eu = await _api.NovoUsuarioAsync();
+        var esposa = await _api.NovoUsuarioAsync();
+        var (_, convite) = await eu.PostAsync("/grupo/convites");
+        var (_, sessao) = await esposa.PostAsync("/grupo/entrar", new { codigo = convite.GetProperty("codigo").GetString() });
+        esposa.AplicarSessao(sessao);
+
+        var mercado = await LojaMapeadaAsync(eu, "Mercado A");
+        var lista = await NovaListaAsync(eu);
+        await NovoItemAsync(eu, lista, "Frango", "Açougue");
+        await NovoItemAsync(eu, lista, "Arroz", "Mercearia");
+        var acougue = await eu.CategoriaAsync("Açougue");
+
+        // Sem divisão, a rota (de qualquer pessoa) leva tudo.
+        var (_, semDivisao) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado, usuarioId = esposa.Id });
+        Assert.Equal(2, semDivisao.GetProperty("paradas").EnumerateArray().Sum(p => p.GetProperty("itens").GetArrayLength()));
+
+        var (status, divisao) = await eu.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = new[] { new { categoriaId = acougue, usuarioId = esposa.Id } } });
+        Assert.Equal(200, status);
+        Assert.Equal(1, divisao.GetArrayLength());
+
+        // Minha rota: só o arroz (categoria de todos); o frango está com ela.
+        var (_, minha) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado, usuarioId = eu.Id });
+        var nomesMinha = minha.GetProperty("paradas").EnumerateArray().SelectMany(p => p.GetProperty("itens").EnumerateArray()).Select(i => i.GetProperty("nome").GetString()).ToList();
+        Assert.Equal(["Arroz"], nomesMinha);
+        Assert.Equal("Frango", minha.GetProperty("comOutrasPessoas")[0].GetProperty("item").GetProperty("nome").GetString());
+        Assert.Equal(esposa.Id, minha.GetProperty("comOutrasPessoas")[0].GetProperty("usuarioId").GetGuid());
+
+        // A rota dela leva o frango e o arroz; a rota sem pessoa (todos) leva os dois.
+        var (_, dela) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado, usuarioId = esposa.Id });
+        Assert.Equal(2, dela.GetProperty("paradas").EnumerateArray().Sum(p => p.GetProperty("itens").GetArrayLength()));
+        var (_, todos) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado });
+        Assert.Equal(2, todos.GetProperty("paradas").EnumerateArray().Sum(p => p.GetProperty("itens").GetArrayLength()));
+        Assert.Equal(0, todos.GetProperty("comOutrasPessoas").GetArrayLength());
+
+        // A divisão volta na lista e some ao desfazer; só vale para esta lista.
+        Assert.Equal(1, (await eu.GetAsync($"/listas/{lista}")).Corpo.GetProperty("divisao").GetArrayLength());
+        var (_, criada) = await eu.PostAsync("/listas", new { competencia = "2026-12", origem = "Zero" });
+        var outraLista = criada.GetProperty("resumo").GetProperty("id").GetGuid();
+        Assert.Equal(0, (await eu.GetAsync($"/listas/{outraLista}")).Corpo.GetProperty("divisao").GetArrayLength());
+        await eu.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = Array.Empty<object>() });
+        Assert.Equal(0, (await eu.GetAsync($"/listas/{lista}")).Corpo.GetProperty("divisao").GetArrayLength());
+    }
+
+    [PostgresFact]
+    public async Task Divisao_recusa_pessoa_de_fora_do_grupo_categoria_repetida_e_lista_de_outro_grupo()
+    {
+        var eu = await _api.NovoUsuarioAsync();
+        var estranho = await _api.NovoUsuarioAsync();
+        var lista = await NovaListaAsync(eu);
+        var acougue = await eu.CategoriaAsync("Açougue");
+        var mercearia = await eu.CategoriaAsync("Mercearia");
+
+        Assert.Equal(400, (await eu.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = new[] { new { categoriaId = acougue, usuarioId = estranho.Id } } })).Status);
+        Assert.Equal(400, (await eu.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = new[] { new { categoriaId = acougue, usuarioId = eu.Id }, new { categoriaId = acougue, usuarioId = eu.Id } } })).Status);
+        Assert.Equal(400, (await eu.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = new[] { new { categoriaId = Guid.NewGuid(), usuarioId = eu.Id } } })).Status);
+        Assert.Equal(404, (await estranho.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = new[] { new { categoriaId = mercearia, usuarioId = estranho.Id } } })).Status);
+    }
+
+    [PostgresFact]
     public async Task Nao_tem_aqui_tira_o_item_da_rota_do_mercado_mas_ele_continua_pendente()
     {
         var u = await _api.NovoUsuarioAsync();

@@ -29,6 +29,21 @@ public sealed class ListasController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, await casoDeUso.ExecutarAsync(requisicao, ct));
     }
 
+    /// <summary>Cancela a compra em andamento e apaga a lista (não vai para o histórico).</summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Cancelar(Guid id, [FromServices] CancelarLista casoDeUso, CancellationToken ct)
+    {
+        await casoDeUso.ExecutarAsync(id, ct);
+        return NoContent();
+    }
+
+    /// <summary>Define quem pega cada categoria nesta ida ao mercado (substitui a divisão atual).</summary>
+    [HttpPut("{id:guid}/divisao")]
+    public async Task<ActionResult<IReadOnlyList<DivisaoDaCategoriaResposta>>> Dividir(Guid id, [FromBody] DividirCompraRequisicao requisicao, [FromServices] DividirCompra casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
+    }
+
     [HttpPost("{id:guid}/finalizar")]
     public async Task<ActionResult<ListaResumoResposta>> Finalizar(Guid id, [FromServices] FinalizarLista casoDeUso, CancellationToken ct)
     {

@@ -94,7 +94,7 @@ public static class PlanejadorDeRota
             {
                 foreach (var lugar in locaisPorGrupo[categoria])
                 {
-                    var parada = MelhorParada(lugar.Secao.Area, lugar.Lado, bloqueado, largura, altura, dist);
+                    var parada = MelhorParada(lugar.Secao.Area, lugar.Lado, bloqueado, largura, altura, dist, centralizar: true);
                     if (parada is { } p && (melhor is null || p.Distancia < melhor.Value.Distancia)) melhor = (categoria, lugar, p.Ponto, p.Distancia);
                 }
             }
@@ -119,7 +119,7 @@ public static class PlanejadorDeRota
         if (paradas.Count > 0)
         {
             var (dist, anterior) = MenoresCaminhos(bloqueado, largura, altura, atual);
-            if (MelhorParada(loja.Caixas, null, bloqueado, largura, altura, dist) is { } fim)
+            if (MelhorParada(loja.Caixas, null, bloqueado, largura, altura, dist, centralizar: false) is { } fim)
             {
                 pontos.AddRange(Caminho(anterior, largura, atual, fim.Ponto).Skip(1));
                 distancia += fim.Distancia;
@@ -210,8 +210,15 @@ public static class PlanejadorDeRota
         }
     }
 
-    private static (PontoDoMapa Ponto, double Distancia)? MelhorParada(AreaDoMapa area, LadoDaSecaoEnum? lado, bool[] bloqueado, int largura, int altura, double[] distancia)
+    /// <summary>
+    /// Onde parar para pegar os itens de uma seção. Com "centralizar", a pessoa para no MEIO do lado comprido da
+    /// gôndola (como quem entra no corredor): no meio da largura, em cima/embaixo, para gôndola horizontal; no meio
+    /// da altura, à esquerda/direita, para vertical. Só se esse corredor não for alcançável cai nas pontas.
+    /// </summary>
+    private static (PontoDoMapa Ponto, double Distancia)? MelhorParada(AreaDoMapa area, LadoDaSecaoEnum? lado, bool[] bloqueado, int largura, int altura, double[] distancia, bool centralizar)
     {
+        if (centralizar && ParadaNoCentro(area, lado, bloqueado, largura, altura, distancia) is { } central) return central;
+
         (PontoDoMapa, double)? melhor = null;
         foreach (var p in Vizinhas(area, lado))
         {
@@ -223,6 +230,45 @@ public static class PlanejadorDeRota
         }
 
         return melhor;
+    }
+
+    private static (PontoDoMapa Ponto, double Distancia)? ParadaNoCentro(AreaDoMapa r, LadoDaSecaoEnum? lado, bool[] bloqueado, int largura, int altura, double[] distancia)
+    {
+        var horizontal = r.Largura >= r.Altura;
+        var ehA = lado == LadoDaSecaoEnum.A;
+        var ehB = lado == LadoDaSecaoEnum.B;
+
+        // Os dois lados compridos (A = cima/esquerda, B = baixo/direita); com lado definido vale só o dele.
+        var lados = new List<List<PontoDoMapa>>();
+        if (horizontal)
+        {
+            if (!ehB) lados.Add(Enumerable.Range(r.X, r.Largura).Select(x => new PontoDoMapa(x, r.Y - 1)).ToList());
+            if (!ehA) lados.Add(Enumerable.Range(r.X, r.Largura).Select(x => new PontoDoMapa(x, r.Y + r.Altura)).ToList());
+        }
+        else
+        {
+            if (!ehB) lados.Add(Enumerable.Range(r.Y, r.Altura).Select(y => new PontoDoMapa(r.X - 1, y)).ToList());
+            if (!ehA) lados.Add(Enumerable.Range(r.Y, r.Altura).Select(y => new PontoDoMapa(r.X + r.Largura, y)).ToList());
+        }
+
+        var meio = horizontal ? r.X + (r.Largura - 1) / 2.0 : r.Y + (r.Altura - 1) / 2.0;
+        (PontoDoMapa Ponto, double Distancia)? escolhida = null;
+        foreach (var corredor in lados)
+        {
+            // Em cada lado, a célula alcançável mais perto do meio (empate: a mais perto de quem anda).
+            var candidatas = corredor
+                .Where(p => p.X >= 0 && p.Y >= 0 && p.X < largura && p.Y < altura && !bloqueado[p.Y * largura + p.X] && !double.IsInfinity(distancia[p.Y * largura + p.X]))
+                .OrderBy(p => Math.Abs((horizontal ? p.X : p.Y) - meio))
+                .ThenBy(p => distancia[p.Y * largura + p.X])
+                .ToList();
+            if (candidatas.Count == 0) continue;
+
+            var ponto = candidatas[0];
+            var caminhada = distancia[ponto.Y * largura + ponto.X];
+            if (escolhida is null || caminhada < escolhida.Value.Distancia) escolhida = (ponto, caminhada);
+        }
+
+        return escolhida;
     }
 
     private static List<PontoDoMapa> Caminho(int[] anterior, int largura, PontoDoMapa de, PontoDoMapa para)

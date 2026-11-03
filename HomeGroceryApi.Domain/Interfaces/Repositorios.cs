@@ -46,4 +46,5 @@ public interface IListaRepository
     Task<int> ProximaOrdemDeItemAsync(Guid listaId, CancellationToken ct);
     Task AdicionarItemAsync(ItemDaLista item, CancellationToken ct);
     void RemoverItem(ItemDaLista item);
+    void RemoverLista(ListaDeCompras lista, IEnumerable<ItemDaLista> itens);
 }

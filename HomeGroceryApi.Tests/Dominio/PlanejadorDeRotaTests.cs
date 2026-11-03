@@ -62,6 +62,34 @@ public class PlanejadorDeRotaTests
     }
 
     [Fact]
+    public void Gondola_horizontal_tem_a_parada_no_meio_do_corredor_e_nao_na_ponta()
+    {
+        var loja = NovaLoja();
+        var gondola = NovaSecao(loja, "Mercearia", new AreaDoMapa(8, 8, 10, 2));
+
+        // Quem vem pela ponta esquerda (a célula mais perto) ainda assim para no meio da largura (x 12 ou 13).
+        var plano = PlanejadorDeRota.Planejar(loja, [gondola], [Vinculo(loja, gondola, Mercearia)], [Demanda(Mercearia)], new PontoDoMapa(6, 9), true);
+
+        var parada = Assert.Single(plano.Paradas).Posicao;
+        Assert.InRange(parada.X, 12, 13);
+        Assert.True(parada.Y == 7 || parada.Y == 10, $"parada em y={parada.Y} não está no corredor de cima ou de baixo");
+    }
+
+    [Fact]
+    public void Gondola_vertical_tem_a_parada_no_meio_da_altura_e_nao_no_topo_ou_no_fim()
+    {
+        var loja = NovaLoja();
+        var gondola = NovaSecao(loja, "Frios", new AreaDoMapa(14, 3, 2, 8));
+
+        // Mesmo vindo de cima, para no meio da altura (y 6 ou 7), no corredor da esquerda ou da direita.
+        var plano = PlanejadorDeRota.Planejar(loja, [gondola], [Vinculo(loja, gondola, Mercearia)], [Demanda(Mercearia)], new PontoDoMapa(14, 0), true);
+
+        var parada = Assert.Single(plano.Paradas).Posicao;
+        Assert.InRange(parada.Y, 6, 7);
+        Assert.True(parada.X == 13 || parada.X == 16, $"parada em x={parada.X} não está no corredor da esquerda ou da direita");
+    }
+
+    [Fact]
     public void Gondola_de_dois_lados_para_no_corredor_do_lado_do_item()
     {
         var loja = NovaLoja();
