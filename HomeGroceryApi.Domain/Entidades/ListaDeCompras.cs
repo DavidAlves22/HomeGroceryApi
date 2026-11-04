@@ -66,6 +66,13 @@ public sealed class ListaDeCompras
         TotalGastoFinal = totalGasto;
     }
 
+    /// <summary>Notas fiscais importadas depois de finalizar mudam o que foi gasto: o total congelado acompanha.</summary>
+    public void AtualizarTotalGastoFinal(decimal totalGasto)
+    {
+        if (!Finalizada) throw new ErroDeDominio("O total só é congelado em compra finalizada.");
+        TotalGastoFinal = totalGasto;
+    }
+
     public void Reabrir()
     {
         if (!Finalizada) throw new ErroDeDominio("A lista já está em andamento.");

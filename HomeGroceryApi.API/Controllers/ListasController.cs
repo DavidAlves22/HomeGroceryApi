@@ -1,5 +1,6 @@
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.UseCases.Listas;
+using HomeGroceryApi.Application.UseCases.Notas;
 using HomeGroceryApi.Application.UseCases.Rotas;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,6 +41,13 @@ public sealed class ListasController : ControllerBase
     /// <summary>Define quem pega cada categoria nesta ida ao mercado (substitui a divisão atual).</summary>
     [HttpPut("{id:guid}/divisao")]
     public async Task<ActionResult<IReadOnlyList<DivisaoDaCategoriaResposta>>> Dividir(Guid id, [FromBody] DividirCompraRequisicao requisicao, [FromServices] DividirCompra casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
+    }
+
+    /// <summary>Importa uma nota fiscal já lida pelo app: preços e quantidades pagos, itens marcados como comprados.</summary>
+    [HttpPost("{id:guid}/nota")]
+    public async Task<ActionResult<ListaResposta>> ImportarNota(Guid id, [FromBody] ImportarNotaRequisicao requisicao, [FromServices] ImportarNotaNaLista casoDeUso, CancellationToken ct)
     {
         return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
     }

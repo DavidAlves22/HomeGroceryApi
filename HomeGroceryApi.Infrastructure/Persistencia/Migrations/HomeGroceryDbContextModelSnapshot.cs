@@ -389,6 +389,10 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.Property<int>("CaixasY")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Cnpj")
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
                     b.Property<int>("EntradaX")
                         .HasColumnType("integer");
 
@@ -446,6 +450,53 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .HasFilter("\"Ativo\" = true");
 
                     b.ToTable("membros_do_grupo", (string)null);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.NotaImportada", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChaveDeAcesso")
+                        .HasMaxLength(44)
+                        .HasColumnType("character varying(44)");
+
+                    b.Property<string>("Cnpj")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ImportadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Impressao")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ListaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GrupoId", "ChaveDeAcesso")
+                        .IsUnique()
+                        .HasFilter("\"ChaveDeAcesso\" IS NOT NULL");
+
+                    b.HasIndex("GrupoId", "Impressao")
+                        .IsUnique();
+
+                    b.ToTable("notas_importadas", (string)null);
                 });
 
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Produto", b =>
@@ -596,6 +647,37 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("tokens_de_renovacao", (string)null);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.VinculoDeProdutoDaNota", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Cnpj")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProdutoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.HasIndex("GrupoId", "Cnpj", "Codigo")
+                        .IsUnique();
+
+                    b.ToTable("vinculos_de_produto_da_nota", (string)null);
                 });
 
             modelBuilder.Entity("HomeGroceryApi.Infrastructure.Identity.ApplicationUser", b =>
@@ -891,6 +973,15 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.NotaImportada", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Produto", b =>
                 {
                     b.HasOne("HomeGroceryApi.Domain.Entidades.Categoria", null)
@@ -927,6 +1018,21 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .WithMany()
                         .HasForeignKey("SecaoId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.VinculoDeProdutoDaNota", b =>
+                {
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HomeGroceryApi.Domain.Entidades.Produto", null)
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

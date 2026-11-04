@@ -104,6 +104,21 @@ public sealed class ItemDaLista
         Versao++;
     }
 
+    /// <summary>
+    /// Compra vinda da nota fiscal: guarda a quantidade e o preço pagos e marca como comprado de uma vez.
+    /// Diferente de marcar/desmarcar, sobrescreve preço e quantidade que já existissem (a nota é a fonte da verdade).
+    /// </summary>
+    public void RegistrarCompra(decimal quantidadeComprada, decimal precoUnitario, Guid usuarioId, DateTime agora, Guid? lojaId)
+    {
+        QuantidadeComprada = quantidadeComprada;
+        PrecoUnitario = precoUnitario;
+        CompradoEm ??= agora;
+        CompradoPorUsuarioId = usuarioId;
+        CompradoNaLojaId = lojaId ?? CompradoNaLojaId;
+        Comprado = true;
+        Versao++;
+    }
+
     public void DefinirSemNaLoja(Guid lojaId, bool sem)
     {
         if (LojasSemOItem.Contains(lojaId) == sem) return;

@@ -13,6 +13,7 @@ public sealed class LojaConfiguracao : IEntityTypeConfiguration<Loja>
         builder.Property(l => l.Id).ValueGeneratedNever();
         builder.Property(l => l.Nome).HasMaxLength(120).IsRequired();
         builder.Property(l => l.Versao).IsConcurrencyToken();
+        builder.Property(l => l.Cnpj).HasMaxLength(14);
         builder.HasOne<Grupo>().WithMany().HasForeignKey(l => l.GrupoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(l => l.GrupoId);
     }

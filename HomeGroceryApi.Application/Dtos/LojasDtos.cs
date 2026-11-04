@@ -32,7 +32,7 @@ public sealed record SecaoResposta(
     IReadOnlyList<Guid> CategoriasLadoA,
     IReadOnlyList<Guid> CategoriasLadoB);
 
-public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao);
+public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao, string? Cnpj = null);
 
 public sealed record LojaResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoResposta> Secoes, int Versao);
 

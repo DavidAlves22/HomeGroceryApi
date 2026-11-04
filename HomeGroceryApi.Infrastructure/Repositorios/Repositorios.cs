@@ -147,7 +147,7 @@ public sealed class UnidadeDeTrabalho : IUnidadeDeTrabalho
         var avisos = new List<AvisoPush>();
 
         // Itens acrescentados a uma lista que já existia (criar a lista com 30 itens não avisa 30 vezes).
-        var itensNovos = entradas.Where(e => e.State == EntityState.Added).Select(e => e.Entity).OfType<ItemDaLista>().Where(i => !listasNovas.Contains(i.ListaId));
+        var itensNovos = entradas.Where(e => e.State == EntityState.Added).Select(e => e.Entity).OfType<ItemDaLista>().Where(i => !listasNovas.Contains(i.ListaId) && !i.Comprado);
         foreach (var grupo in itensNovos.GroupBy(i => (i.GrupoId, i.ListaId, i.AdicionadoPorUsuarioId)))
         {
             avisos.Add(new AvisoPush(grupo.Key.GrupoId, grupo.Key.AdicionadoPorUsuarioId, false, grupo.Select(i => i.NomeSnapshot).ToList(), null, grupo.Key.ListaId));

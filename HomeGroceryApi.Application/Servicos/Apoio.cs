@@ -108,7 +108,7 @@ public static class Mapeamentos
 
     public static AreaDoMapa ParaArea(this AreaDto a) => new(a.X, a.Y, a.Largura, a.Altura);
 
-    public static LojaResumoResposta ParaResumo(this Loja l, int secoes) => new(l.Id, l.Nome, l.Largura, l.Altura, secoes, l.Versao);
+    public static LojaResumoResposta ParaResumo(this Loja l, int secoes) => new(l.Id, l.Nome, l.Largura, l.Altura, secoes, l.Versao, l.Cnpj);
 
     public static LojaResposta ParaResposta(this Loja loja, IReadOnlyList<Secao> secoes, IReadOnlyList<SecaoCategoria> vinculos)
     {

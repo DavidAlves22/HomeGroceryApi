@@ -21,6 +21,10 @@ public sealed class Loja
     public int CaixasLargura { get; private set; }
     public int CaixasAltura { get; private set; }
     public int Versao { get; private set; }
+
+    /// <summary>CNPJ do mercado (só dígitos), aprendido ao importar notas fiscais: a próxima nota dele já abre no mercado certo.</summary>
+    public string? Cnpj { get; private set; }
+
     public DateTime? ExcluidoEm { get; private set; }
 
     public PontoDoMapa Entrada => new(EntradaX, EntradaY);
@@ -42,6 +46,12 @@ public sealed class Loja
     {
         Aplicar(nome, largura, altura, entrada, caixas);
         Versao++;
+    }
+
+    /// <summary>Não mexe na versão do mapa: guardar o CNPJ não é editar o desenho.</summary>
+    public void DefinirCnpj(string? cnpj)
+    {
+        Cnpj = cnpj;
     }
 
     public void Excluir(DateTime agora)
