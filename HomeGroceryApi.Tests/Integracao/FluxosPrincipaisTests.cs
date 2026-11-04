@@ -1,3 +1,4 @@
+using HomeGroceryApi.Domain.Servicos;
 using System.Text.Json;
 
 namespace HomeGroceryApi.Tests.Integracao;
@@ -29,16 +30,17 @@ public class FluxosPrincipaisTests
     private static string[] Nomes(JsonElement itens) => itens.EnumerateArray().Select(i => i.GetProperty("nome").GetString()!).ToArray();
 
     [PostgresFact]
-    public async Task Cadastro_cria_as_11_categorias_iniciais_na_ordem()
+    public async Task Cadastro_cria_as_categorias_iniciais_na_ordem()
     {
         var u = await _api.NovoUsuarioAsync();
 
         var (status, categorias) = await u.GetAsync("/categorias");
 
         Assert.Equal(200, status);
-        Assert.Equal(11, categorias.GetArrayLength());
+        Assert.Equal(CategoriasIniciais.Nomes.Count, categorias.GetArrayLength());
         Assert.Equal("Mercearia", categorias[0].GetProperty("nome").GetString());
-        Assert.Equal("Outros", categorias[10].GetProperty("nome").GetString());
+        Assert.Equal("Outros", categorias[CategoriasIniciais.Nomes.Count - 1].GetProperty("nome").GetString());
+        Assert.Equal("Refrigerantes", categorias[10].GetProperty("nome").GetString());
     }
 
     [PostgresFact]
@@ -265,7 +267,7 @@ public class FluxosPrincipaisTests
         var (_, modelo) = await u.GetAsync("/modelo/itens");
         Assert.Equal(outros, modelo[0].GetProperty("categoriaId").GetGuid());
         var (_, categorias) = await u.GetAsync("/categorias");
-        Assert.Equal(10, categorias.GetArrayLength());
+        Assert.Equal(CategoriasIniciais.Nomes.Count - 1, categorias.GetArrayLength());
 
         var (status, _) = await u.PostAsync($"/listas/{listaId}/itens", new { nome = "Cerveja", categoriaId = bebidas, unidade = "Unidade", quantidade = 6 });
         Assert.Equal(400, status);

@@ -10,7 +10,15 @@ public static class CategoriasIniciais
     public static readonly IReadOnlyList<string> Nomes =
     [
         "Mercearia", "Açougue", "Hortifruti", "Padaria", "Laticínios", "Bebidas",
-        "Limpeza", "Higiene pessoal", "Congelados", "Pet", "Outros",
+        "Limpeza", "Higiene pessoal", "Congelados", "Pet",
+
+        // Corredores do mapa de mercado (um por gôndola), para a rota ir direto ao lugar certo.
+        "Refrigerantes", "Cervejas", "Bebidas alcoólicas", "Águas", "Sucos",
+        "Conservas", "Enlatados", "Macarrão", "Temperos", "Condimentos", "Farinhas", "Matinais", "Bolachas", "Chocolates", "Salgadinhos", "Sobremesas",
+        "Leites", "Iogurtes", "Ovos", "Frios", "Embutidos", "Rotisseria", "Carnes congeladas",
+        "Shampoos", "Absorventes", "Perfumaria", "Papéis", "Utilidades", "Brinquedos", "Limpeza carro",
+
+        "Outros",
     ];
 
     public static IReadOnlyList<Categoria> CriarPara(Guid grupoId, Func<Guid> novoId)

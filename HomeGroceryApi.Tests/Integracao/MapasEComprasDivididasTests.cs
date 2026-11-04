@@ -26,7 +26,7 @@ public class MapasEComprasDivididasTests
 
     private static async Task<JsonElement> NovaLojaAsync(UsuarioDeTeste u, string nome)
     {
-        var (status, loja) = await u.PostAsync("/lojas", new { nome });
+        var (status, loja) = await u.PostAsync("/lojas", new { nome, cidade = "Araras" });
         Assert.Equal(201, status);
         return loja;
     }
@@ -123,7 +123,7 @@ public class MapasEComprasDivididasTests
         Assert.Equal(201, status);
         Assert.Equal(2, copia.GetProperty("secoes").GetArrayLength());
         Assert.NotEqual(origem, copia.GetProperty("id").GetGuid());
-        Assert.Equal(409, (await u.PostAsync("/lojas", new { nome = "copia" })).Status);
+        Assert.Equal(409, (await u.PostAsync("/lojas", new { nome = "copia", cidade = "Araras" })).Status);
     }
 
     [PostgresFact]
@@ -473,5 +473,24 @@ public class MapasEComprasDivididasTests
         var (_, depois) = await u.GetAsync($"/listas/{lista}");
         Assert.Equal(mercado, depois.GetProperty("itens")[0].GetProperty("compradoNaLojaId").GetGuid());
         Assert.Equal(400, (await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercado })).Status);
+    }
+
+    [PostgresFact]
+    public async Task A_grade_do_mapa_aceita_de_10_a_120_celulas_em_cada_lado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var (_, loja) = await u.PostAsync("/lojas", new { nome = "Mercado Grande", cidade = "Araras" });
+        var id = loja.GetProperty("id").GetGuid();
+        var versao = loja.GetProperty("versao").GetInt32();
+
+        object Pedido(int largura, int altura, int v) => new { nome = "Mercado Grande", largura, altura, entrada = new { x = 2, y = 8 }, caixas = Area(5, 5, 3, 2), secoes = Array.Empty<object>(), versao = v };
+
+        var (status, grande) = await u.PutAsync($"/lojas/{id}/mapa", Pedido(120, 120, versao));
+        Assert.Equal(200, status);
+        Assert.Equal(120, grande.GetProperty("largura").GetInt32());
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Pedido(121, 40, grande.GetProperty("versao").GetInt32()))).Status);
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Pedido(40, 121, grande.GetProperty("versao").GetInt32()))).Status);
+        Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Pedido(9, 40, grande.GetProperty("versao").GetInt32()))).Status);
+        Assert.Equal(200, (await u.PutAsync($"/lojas/{id}/mapa", Pedido(10, 10, grande.GetProperty("versao").GetInt32()))).Status);
     }
 }

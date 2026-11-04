@@ -10,7 +10,7 @@ using HomeGroceryApi.Domain.Servicos;
 namespace HomeGroceryApi.Application.UseCases.Autenticacao;
 
 /// <summary>
-/// Cria a conta e, na mesma transação, o grupo pessoal do usuário com as 11 categorias
+/// Cria a conta e, na mesma transação, o grupo pessoal do usuário com as categorias
 /// iniciais. Exemplo: "Maria" se cadastra e já ganha o grupo "Casa de Maria" com Mercearia, Açougue...
 /// </summary>
 public sealed class CadastrarUsuario

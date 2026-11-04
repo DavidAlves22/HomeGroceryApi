@@ -1,3 +1,4 @@
+using HomeGroceryApi.Domain.Servicos;
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.Excecoes;
 using HomeGroceryApi.Application.Servicos;
@@ -35,7 +36,7 @@ public class AutenticacaoTests
         Assert.Single(_grupos.Grupos);
         Assert.True(_grupos.Grupos[0].Pessoal);
         Assert.Equal(sessao.GrupoId, _grupos.Grupos[0].Id);
-        Assert.Equal(11, _grupos.Categorias.Count);
+        Assert.Equal(CategoriasIniciais.Nomes.Count, _grupos.Categorias.Count);
         Assert.Equal("Mercearia", _grupos.Categorias.OrderBy(c => c.Ordem).First().Nome);
         Assert.All(_grupos.Categorias, c => Assert.Equal(sessao.GrupoId, c.GrupoId));
     }

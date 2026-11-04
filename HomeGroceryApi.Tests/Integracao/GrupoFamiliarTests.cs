@@ -1,3 +1,4 @@
+using HomeGroceryApi.Domain.Servicos;
 using System.Threading.Channels;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Connections;
@@ -62,7 +63,7 @@ public class GrupoFamiliarTests
         var (_, listas) = await membro.GetAsync("/listas");
         Assert.Equal(listaId, listas[0].GetProperty("id").GetGuid());
         var (_, categorias) = await membro.GetAsync("/categorias");
-        Assert.Equal(11, categorias.GetArrayLength());
+        Assert.Equal(CategoriasIniciais.Nomes.Count, categorias.GetArrayLength());
     }
 
     [PostgresFact]
@@ -237,7 +238,7 @@ public class GrupoFamiliarTests
         Assert.NotEqual(grupoDaFamilia, admin.GrupoId);
         var (_, listasDoAdmin) = await admin.GetAsync("/listas");
         Assert.Equal(0, listasDoAdmin.GetArrayLength());
-        Assert.Equal(11, (await admin.GetAsync("/categorias")).Corpo.GetArrayLength());
+        Assert.Equal(CategoriasIniciais.Nomes.Count, (await admin.GetAsync("/categorias")).Corpo.GetArrayLength());
         var (_, grupo) = await membro.GetAsync("/grupo");
         Assert.Equal("Administrador", grupo.GetProperty("meuPapel").GetString());
         Assert.Equal(1, (await membro.GetAsync("/listas")).Corpo.GetArrayLength());

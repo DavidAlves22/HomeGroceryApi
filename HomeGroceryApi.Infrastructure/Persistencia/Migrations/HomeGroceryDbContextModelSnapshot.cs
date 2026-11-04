@@ -421,9 +421,22 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.Property<int>("CaixasY")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("CidadeBusca")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<string>("Cnpj")
                         .HasMaxLength(14)
                         .HasColumnType("character varying(14)");
+
+                    b.Property<bool>("Compartilhada")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<int>("EntradaX")
                         .HasColumnType("integer");
@@ -445,13 +458,20 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<Guid?>("OrigemId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Versao")
                         .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CidadeBusca");
+
                     b.HasIndex("GrupoId");
+
+                    b.HasIndex("OrigemId");
 
                     b.ToTable("lojas", (string)null);
                 });

@@ -6,7 +6,8 @@ public sealed record PontoDto(int X, int Y);
 
 public sealed record AreaDto(int X, int Y, int Largura, int Altura);
 
-public sealed record CriarLojaRequisicao(string Nome, Guid? CopiarDeLojaId = null);
+/// <summary>Cidade obrigatória; ao copiar de outro mercado do grupo, vale a dele se esta não vier.</summary>
+public sealed record CriarLojaRequisicao(string Nome, Guid? CopiarDeLojaId = null, string? Cidade = null);
 
 /// <summary>
 /// Uma seção do mapa. CategoriasLadoA vale também para seção de um lado só. As ids das seções são sempre
@@ -21,7 +22,7 @@ public sealed record SecaoRequisicao(
     IReadOnlyList<Guid>? CategoriasLadoB = null,
     Guid? IdAnterior = null);
 
-public sealed record SalvarMapaRequisicao(string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoRequisicao> Secoes, int Versao);
+public sealed record SalvarMapaRequisicao(string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoRequisicao> Secoes, int Versao, string? Cidade = null);
 
 public sealed record SecaoResposta(
     Guid Id,
@@ -32,9 +33,19 @@ public sealed record SecaoResposta(
     IReadOnlyList<Guid> CategoriasLadoA,
     IReadOnlyList<Guid> CategoriasLadoB);
 
-public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao, string? Cnpj = null);
+public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao, string? Cnpj = null, bool Compartilhada = true, string? Cidade = null);
 
-public sealed record LojaResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoResposta> Secoes, int Versao);
+public sealed record LojaResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoResposta> Secoes, int Versao, bool Compartilhada = true, string? Cidade = null);
+
+public sealed record CompartilharLojaRequisicao(bool Compartilhada);
+
+/// <summary>Item da lista do catálogo de mapas (sem nenhum dado de quem criou).</summary>
+public sealed record CatalogoMercadoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Copias, string? Cidade = null);
+
+/// <summary>Seção de um mapa do catálogo: as categorias vão pelo NOME (os ids pertencem ao grupo de quem criou).</summary>
+public sealed record CatalogoSecaoResposta(string Nome, string? NomeLadoB, bool Dividida, AreaDto Area, IReadOnlyList<string> CategoriasLadoA, IReadOnlyList<string> CategoriasLadoB);
+
+public sealed record CatalogoMercadoDetalheResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<CatalogoSecaoResposta> Secoes, int Copias, string? Cidade = null);
 
 public sealed record LocalDoProdutoRequisicao(Guid SecaoId, LadoDaSecaoEnum Lado);
 

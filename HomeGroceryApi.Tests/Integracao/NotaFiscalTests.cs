@@ -157,7 +157,7 @@ public class NotaFiscalTests
     {
         var u = await _api.NovoUsuarioAsync();
         var (lista, wafer, _) = await ListaComItensAsync(u);
-        var (_, loja) = await u.PostAsync("/lojas", new { nome = "WMS Araras" });
+        var (_, loja) = await u.PostAsync("/lojas", new { nome = "WMS Araras", cidade = "Araras" });
         var lojaId = loja.GetProperty("id").GetGuid();
 
         var (status, resposta) = await u.PostAsync($"/listas/{lista}/nota", new { cnpj = Cnpj, lojaId, itens = new[] { Item("AR039393", "BISC.BAUDUCCO WAFER", 1, 4.39m, itemId: wafer) } });

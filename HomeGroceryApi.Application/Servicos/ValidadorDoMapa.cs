@@ -11,7 +11,7 @@ namespace HomeGroceryApi.Application.Servicos;
 public static class ValidadorDoMapa
 {
     public const int TamanhoMinimo = 10;
-    public const int TamanhoMaximo = 80;
+    public const int TamanhoMaximo = 120;
     public const int MaximoDeSecoes = 150;
 
     public static void Validar(SalvarMapaRequisicao mapa, IReadOnlySet<Guid> categoriasValidas)

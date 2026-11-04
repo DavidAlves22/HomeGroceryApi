@@ -1,4 +1,5 @@
 using HomeGroceryApi.Domain.ObjetosDeValor;
+using HomeGroceryApi.Domain.Servicos;
 
 namespace HomeGroceryApi.Domain.Entidades;
 
@@ -25,6 +26,18 @@ public sealed class Loja
     /// <summary>CNPJ do mercado (só dígitos), aprendido ao importar notas fiscais: a próxima nota dele já abre no mercado certo.</summary>
     public string? Cnpj { get; private set; }
 
+    /// <summary>Cidade do mercado (obrigatória em mercados novos). Mapa sem cidade não aparece no catálogo.</summary>
+    public string? Cidade { get; private set; }
+
+    /// <summary>Cidade em minúsculas e sem acento ("Sao Paulo" acha "São Paulo"): é o que o filtro do catálogo compara.</summary>
+    public string? CidadeBusca { get; private set; }
+
+    /// <summary>Aparece no catálogo para outros grupos copiarem (quem copia recebe uma cópia independente; o original nunca é editado por outro grupo). Padrão: ligado.</summary>
+    public bool Compartilhada { get; private set; } = true;
+
+    /// <summary>Mapa do catálogo de onde esta cópia nasceu (serve para contar quantas vezes o mapa foi copiado).</summary>
+    public Guid? OrigemId { get; private set; }
+
     public DateTime? ExcluidoEm { get; private set; }
 
     public PontoDoMapa Entrada => new(EntradaX, EntradaY);
@@ -35,10 +48,11 @@ public sealed class Loja
     {
     }
 
-    public static Loja Criar(Guid id, Guid grupoId, string nome, int largura, int altura, PontoDoMapa entrada, AreaDoMapa caixas)
+    public static Loja Criar(Guid id, Guid grupoId, string nome, int largura, int altura, PontoDoMapa entrada, AreaDoMapa caixas, Guid? origemId = null, string? cidade = null)
     {
-        var loja = new Loja { Id = id, GrupoId = grupoId, Versao = 1 };
+        var loja = new Loja { Id = id, GrupoId = grupoId, Versao = 1, OrigemId = origemId };
         loja.Aplicar(nome, largura, altura, entrada, caixas);
+        if (cidade is not null) loja.DefinirCidade(cidade);
         return loja;
     }
 
@@ -48,10 +62,23 @@ public sealed class Loja
         Versao++;
     }
 
+    /// <summary>A validação do texto (tamanho, obrigatoriedade) é do caso de uso; aqui só guarda as duas formas.</summary>
+    public void DefinirCidade(string cidade)
+    {
+        Cidade = cidade;
+        CidadeBusca = AnaliseDeCompras.Normalizar(cidade);
+    }
+
     /// <summary>Não mexe na versão do mapa: guardar o CNPJ não é editar o desenho.</summary>
     public void DefinirCnpj(string? cnpj)
     {
         Cnpj = cnpj;
+    }
+
+    /// <summary>Não mexe na versão: compartilhar não é editar o desenho.</summary>
+    public void DefinirCompartilhada(bool compartilhada)
+    {
+        Compartilhada = compartilhada;
     }
 
     public void Excluir(DateTime agora)

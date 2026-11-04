@@ -75,12 +75,13 @@ public sealed class CriarLoja
         var secoes = new List<Secao>();
         var vinculos = new List<SecaoCategoria>();
         var locais = new List<LocalDoProduto>();
+        var cidadeInformada = string.IsNullOrWhiteSpace(requisicao.Cidade) ? null : Entrada.Cidade(requisicao.Cidade);
         Loja loja;
 
         if (requisicao.CopiarDeLojaId is { } origemId)
         {
             var origem = existentes.FirstOrDefault(l => l.Id == origemId) ?? throw new ErroDeNaoEncontrado("Mercado de origem não encontrado.");
-            loja = Loja.Criar(Guid.CreateVersion7(), grupoId, nome, origem.Largura, origem.Altura, origem.Entrada, origem.Caixas);
+            loja = Loja.Criar(Guid.CreateVersion7(), grupoId, nome, origem.Largura, origem.Altura, origem.Entrada, origem.Caixas, cidade: cidadeInformada ?? origem.Cidade ?? throw new ErroDeValidacao("Informe a cidade do mercado."));
 
             var novasIds = new Dictionary<Guid, Guid>();
             foreach (var s in await _lojas.ListarSecoesAsync(grupoId, origemId, ct))
@@ -95,7 +96,7 @@ public sealed class CriarLoja
         }
         else
         {
-            loja = Loja.Criar(Guid.CreateVersion7(), grupoId, nome, LarguraPadrao, AlturaPadrao, new PontoDoMapa(16, 37), new AreaDoMapa(24, 34, 7, 2));
+            loja = Loja.Criar(Guid.CreateVersion7(), grupoId, nome, LarguraPadrao, AlturaPadrao, new PontoDoMapa(16, 37), new AreaDoMapa(24, 34, 7, 2), cidade: Entrada.Cidade(cidadeInformada));
         }
 
         await _lojas.AdicionarAsync(loja, ct);
@@ -133,6 +134,8 @@ public sealed class SalvarMapaDaLoja
         if (loja.Versao != requisicao.Versao) throw new ErroDeConflito("O mapa deste mercado foi alterado por outra pessoa. Atualize e tente de novo.");
 
         var nome = Entrada.Nome(requisicao.Nome, "O nome do mercado");
+        // Sem cidade no pedido vale a que o mercado já tem; mercado antigo sem cidade só salva depois de informar uma.
+        var cidade = requisicao.Cidade is null ? Entrada.Cidade(loja.Cidade) : Entrada.Cidade(requisicao.Cidade);
         var existentes = await _lojas.ListarAsync(grupoId, false, ct);
         if (existentes.Any(l => l.Id != id && string.Equals(l.Nome, nome, StringComparison.OrdinalIgnoreCase))) throw new ErroDeConflito("Já existe um mercado com esse nome.");
 
@@ -169,6 +172,7 @@ public sealed class SalvarMapaDaLoja
 
         _lojas.RemoverLocais(descartados);
         _lojas.RemoverMapa(antigas, await _lojas.ListarVinculosAsync(grupoId, id, ct));
+        loja.DefinirCidade(cidade);
         loja.DefinirMapa(nome, requisicao.Largura, requisicao.Altura, new PontoDoMapa(requisicao.Entrada.X, requisicao.Entrada.Y), requisicao.Caixas.ParaArea());
         await _lojas.AdicionarMapaAsync(secoes, vinculos, ct);
         await _unidade.SalvarAsync(ct);
