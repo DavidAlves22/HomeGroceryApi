@@ -493,4 +493,24 @@ public class MapasEComprasDivididasTests
         Assert.Equal(400, (await u.PutAsync($"/lojas/{id}/mapa", Pedido(9, 40, grande.GetProperty("versao").GetInt32()))).Status);
         Assert.Equal(200, (await u.PutAsync($"/lojas/{id}/mapa", Pedido(10, 10, grande.GetProperty("versao").GetInt32()))).Status);
     }
+
+    [PostgresFact]
+    public async Task Excluir_uma_categoria_tira_ela_das_secoes_dos_mapas_e_o_mapa_continua_salvando()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var lojaId = await LojaMapeadaAsync(u, "Mercado Central");
+        var limpeza = await u.CategoriaAsync("Limpeza");
+        var mercearia = await u.CategoriaAsync("Mercearia");
+
+        Assert.Equal(204, (await u.DeleteAsync($"/categorias/{limpeza}")).Status);
+
+        var (_, loja) = await u.GetAsync($"/lojas/{lojaId}");
+        var gondola = loja.GetProperty("secoes").EnumerateArray().First(s => s.GetProperty("dividida").GetBoolean());
+        Assert.Equal(0, gondola.GetProperty("categoriasLadoB").GetArrayLength());
+        Assert.Equal(mercearia, gondola.GetProperty("categoriasLadoA")[0].GetGuid());
+
+        // O mapa devolvido pela API (sem a categoria apagada) volta a ser aceito ao salvar.
+        var secoes = loja.GetProperty("secoes").EnumerateArray().Select(s => Secao(s.GetProperty("nome").GetString()!, Area(s.GetProperty("area").GetProperty("x").GetInt32(), s.GetProperty("area").GetProperty("y").GetInt32(), s.GetProperty("area").GetProperty("largura").GetInt32(), s.GetProperty("area").GetProperty("altura").GetInt32()), s.GetProperty("categoriasLadoA").EnumerateArray().Select(c => c.GetGuid()).ToArray(), s.GetProperty("categoriasLadoB").EnumerateArray().Select(c => c.GetGuid()).ToArray(), s.GetProperty("nomeLadoB").GetString(), s.GetProperty("dividida").GetBoolean())).ToArray();
+        Assert.Equal(200, (await u.PutAsync($"/lojas/{lojaId}/mapa", Mapa("Mercado Central", loja.GetProperty("versao").GetInt32(), secoes))).Status);
+    }
 }

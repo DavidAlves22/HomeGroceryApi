@@ -13,6 +13,9 @@ public interface ILojaRepository
     /// </summary>
     Task<List<ItemDoCatalogo>> ListarCatalogoAsync(Guid grupoIdDoUsuario, string? busca, string? cidade, int limite, CancellationToken ct);
 
+    /// <summary>Tira a categoria de todas as seções de todos os mercados do grupo (ao excluí-la, ela some dos mapas).</summary>
+    Task RemoverVinculosDaCategoriaAsync(Guid grupoId, Guid categoriaId, CancellationToken ct);
+
     Task<Loja?> ObterDoCatalogoAsync(Guid id, CancellationToken ct);
     Task<int> ContarCopiasAsync(Guid lojaId, CancellationToken ct);
     Task<List<Secao>> ListarSecoesDoCatalogoAsync(Guid lojaId, CancellationToken ct);

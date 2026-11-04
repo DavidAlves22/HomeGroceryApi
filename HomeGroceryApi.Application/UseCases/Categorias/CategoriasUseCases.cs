@@ -83,10 +83,12 @@ public sealed class RenomearCategoria
 
 /// <summary>
 /// Exclusão lógica. Produtos e itens da lista padrão que usavam a categoria passam para "Outros";
-/// itens de listas antigas continuam mostrando o nome que tinham na época.
+/// itens de listas antigas continuam mostrando o nome que tinham na época. Nos mapas de mercado a categoria some das
+/// seções que a usavam (a seção fica sem categoria até a pessoa escolher outra).
 /// </summary>
 public sealed class ExcluirCategoria
 {
+    private readonly ILojaRepository _lojas;
     private readonly ICategoriaRepository _categorias;
     private readonly IProdutoRepository _produtos;
     private readonly IModeloRepository _modelo;
@@ -94,8 +96,9 @@ public sealed class ExcluirCategoria
     private readonly IUsuarioAtual _usuario;
     private readonly IRelogio _relogio;
 
-    public ExcluirCategoria(ICategoriaRepository categorias, IProdutoRepository produtos, IModeloRepository modelo, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario, IRelogio relogio)
+    public ExcluirCategoria(ILojaRepository lojas, ICategoriaRepository categorias, IProdutoRepository produtos, IModeloRepository modelo, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario, IRelogio relogio)
     {
+        _lojas = lojas;
         _categorias = categorias;
         _produtos = produtos;
         _modelo = modelo;
@@ -116,6 +119,7 @@ public sealed class ExcluirCategoria
         foreach (var produto in (await _produtos.BuscarAsync(grupoId, null, ct)).Where(p => p.CategoriaId == id)) produto.MoverParaCategoria(destino.Id);
         foreach (var item in (await _modelo.ListarAsync(grupoId, null, ct)).Where(i => i.CategoriaId == id)) item.MoverParaCategoria(destino.Id);
 
+        await _lojas.RemoverVinculosDaCategoriaAsync(grupoId, id, ct);
         categoria.Excluir(_relogio.AgoraUtc);
         await _unidade.SalvarAsync(ct);
     }

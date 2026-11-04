@@ -38,6 +38,12 @@ public sealed class LojaRepository : ILojaRepository
         return linhas.Select(x => new ItemDoCatalogo(x.Loja, x.Secoes, x.Copias)).ToList();
     }
 
+    public async Task RemoverVinculosDaCategoriaAsync(Guid grupoId, Guid categoriaId, CancellationToken ct)
+    {
+        var vinculos = await _contexto.SecaoCategorias.Where(v => v.GrupoId == grupoId && v.CategoriaId == categoriaId).ToListAsync(ct);
+        _contexto.SecaoCategorias.RemoveRange(vinculos);
+    }
+
     public Task<Loja?> ObterDoCatalogoAsync(Guid id, CancellationToken ct)
     {
         return _contexto.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id && l.Compartilhada && l.ExcluidoEm == null, ct);
