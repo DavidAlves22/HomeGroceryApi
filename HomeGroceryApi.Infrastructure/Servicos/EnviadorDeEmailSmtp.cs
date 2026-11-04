@@ -26,6 +26,9 @@ public sealed class EmailOpcoes
 
     /// <summary>Auto (padrão): usa STARTTLS quando o servidor oferece. SslOnConnect para a porta 465; None só para testes locais.</summary>
     public string Seguranca { get; set; } = "Auto";
+
+    /// <summary>Tempo máximo do envio inteiro. Menor que o limite do app (15 s), para a resposta chegar mesmo se o SMTP não responder.</summary>
+    public int TempoLimiteEmSegundos { get; set; } = 10;
 }
 
 public sealed class EnviadorDeEmailSmtp : IEnviadorDeEmail
@@ -53,17 +56,19 @@ public sealed class EnviadorDeEmailSmtp : IEnviadorDeEmail
             mensagem.Subject = assunto;
             mensagem.Body = new TextPart("plain") { Text = texto };
 
-            using var cliente = new SmtpClient();
+            // Prazo próprio (não o da requisição): se o app desistir antes, o envio não é cortado no meio.
+            using var prazo = new CancellationTokenSource(TimeSpan.FromSeconds(_opcoes.TempoLimiteEmSegundos));
+            using var cliente = new SmtpClient { Timeout = _opcoes.TempoLimiteEmSegundos * 1000 };
             var seguranca = Enum.TryParse<SecureSocketOptions>(_opcoes.Seguranca, true, out var escolhida) ? escolhida : SecureSocketOptions.Auto;
-            await cliente.ConnectAsync(_opcoes.Host, _opcoes.Porta, seguranca, ct);
-            if (!string.IsNullOrEmpty(_opcoes.Usuario)) await cliente.AuthenticateAsync(_opcoes.Usuario, _opcoes.Senha, ct);
-            await cliente.SendAsync(mensagem, ct);
-            await cliente.DisconnectAsync(true, ct);
+            await cliente.ConnectAsync(_opcoes.Host, _opcoes.Porta, seguranca, prazo.Token);
+            if (!string.IsNullOrEmpty(_opcoes.Usuario)) await cliente.AuthenticateAsync(_opcoes.Usuario, _opcoes.Senha, prazo.Token);
+            await cliente.SendAsync(mensagem, prazo.Token);
+            await cliente.DisconnectAsync(true, prazo.Token);
         }
         catch (Exception erro)
         {
             // Nunca derruba a requisição nem revela por ela se o e-mail existe: só registra (sem o código nem a senha do SMTP).
-            _log.LogWarning(erro, "Falha ao enviar e-mail de recuperação");
+            _log.LogWarning(erro, "Falha ao enviar e-mail de recuperação (servidor {Host}:{Porta})", _opcoes.Host, _opcoes.Porta);
         }
     }
 }
