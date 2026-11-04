@@ -28,6 +28,7 @@ public sealed class HomeGroceryDbContext : IdentityDbContext<ApplicationUser, Id
     public DbSet<AssinaturaDePush> AssinaturasDePush => Set<AssinaturaDePush>();
     public DbSet<VinculoDeProdutoDaNota> VinculosDaNota => Set<VinculoDeProdutoDaNota>();
     public DbSet<NotaImportada> NotasImportadas => Set<NotaImportada>();
+    public DbSet<CodigoDeRecuperacao> CodigosDeRecuperacao => Set<CodigoDeRecuperacao>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

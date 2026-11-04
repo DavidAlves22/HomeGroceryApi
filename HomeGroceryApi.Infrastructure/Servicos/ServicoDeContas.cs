@@ -50,6 +50,44 @@ public sealed class ServicoDeContas : IServicoDeContas
         return usuario is null ? null : new ContaDoUsuario(usuario.Id, usuario.Nome, usuario.Email!);
     }
 
+    public async Task<ContaDoUsuario?> ObterPorEmailAsync(string email, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByEmailAsync(email);
+        return usuario is null ? null : new ContaDoUsuario(usuario.Id, usuario.Nome, usuario.Email!);
+    }
+
+    public async Task<IReadOnlyList<string>> RedefinirSenhaAsync(Guid usuarioId, string novaSenha, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString());
+        if (usuario is null) return ["Conta não encontrada."];
+
+        // Valida pelas mesmas regras do cadastro ANTES de gravar: trocar o hash só depois de a senha nova ser aceita.
+        var erros = new List<string>();
+        foreach (var validador in _usuarios.PasswordValidators)
+        {
+            var resultado = await validador.ValidateAsync(_usuarios, usuario, novaSenha);
+            if (!resultado.Succeeded) erros.AddRange(resultado.Errors.Select(TraduzirErro));
+        }
+
+        if (erros.Count > 0) return erros.Distinct().ToList();
+
+        usuario.PasswordHash = _usuarios.PasswordHasher.HashPassword(usuario, novaSenha);
+        var gravado = await _usuarios.UpdateAsync(usuario);
+        if (!gravado.Succeeded) return ["Não foi possível trocar a senha agora. Tente de novo."];
+
+        // Quem esquece a senha costuma ter errado várias vezes: a conta volta destravada.
+        await _usuarios.ResetAccessFailedCountAsync(usuario);
+        await _usuarios.SetLockoutEndDateAsync(usuario, null);
+        return [];
+    }
+
+    public async Task AlterarNomeAsync(Guid usuarioId, string nome, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString()) ?? throw new InvalidOperationException("Conta não encontrada.");
+        usuario.Nome = nome;
+        await _usuarios.UpdateAsync(usuario);
+    }
+
     private static string TraduzirErro(IdentityError erro)
     {
         return erro.Code switch
@@ -59,6 +97,7 @@ public sealed class ServicoDeContas : IServicoDeContas
             "PasswordRequiresLower" => "A senha precisa ter ao menos uma letra minúscula.",
             "PasswordRequiresUpper" => "A senha precisa ter ao menos uma letra maiúscula.",
             "InvalidEmail" => "Informe um e-mail válido.",
+            "PasswordRequiresNonAlphanumeric" => "A senha precisa ter ao menos um símbolo.",
             _ => "Não foi possível criar a conta com os dados informados.",
         };
     }

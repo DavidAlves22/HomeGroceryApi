@@ -11,4 +11,10 @@ public interface IServicoDeContas
     Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct);
     Task<ContaDoUsuario?> ValidarCredenciaisAsync(string email, string senha, CancellationToken ct);
     Task<ContaDoUsuario?> ObterPorIdAsync(Guid usuarioId, CancellationToken ct);
+    Task<ContaDoUsuario?> ObterPorEmailAsync(string email, CancellationToken ct);
+
+    /// <summary>Troca a senha sem pedir a antiga (quem chama já provou ser o dono, pelo código do e-mail). Devolve os erros de regra de senha; vazio = trocou.</summary>
+    Task<IReadOnlyList<string>> RedefinirSenhaAsync(Guid usuarioId, string novaSenha, CancellationToken ct);
+
+    Task AlterarNomeAsync(Guid usuarioId, string nome, CancellationToken ct);
 }

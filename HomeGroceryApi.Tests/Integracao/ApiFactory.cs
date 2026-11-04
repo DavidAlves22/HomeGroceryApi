@@ -34,12 +34,22 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Os avisos por push que a API tentou enviar (o envio de verdade é trocado por este registro).</summary>
     public NotificadorDePushDeTeste Avisos { get; } = new();
 
+    /// <summary>Os e-mails de recuperação de senha que a API tentou enviar (o SMTP é trocado por este registro).</summary>
+    public EnviadorDeEmailDeTeste Emails { get; } = new();
+
+    /// <summary>Trocado no lugar da validação real do Google (token de teste: "ok|email|nome").</summary>
+    public ValidadorDeLoginGoogleDeTeste Google { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(servicos =>
         {
+            servicos.RemoveAll<IValidadorDeLoginGoogle>();
+            servicos.AddSingleton<IValidadorDeLoginGoogle>(Google);
             servicos.RemoveAll<INotificadorDePush>();
             servicos.AddSingleton<INotificadorDePush>(Avisos);
+            servicos.RemoveAll<IEnviadorDeEmail>();
+            servicos.AddSingleton<IEnviadorDeEmail>(Emails);
         });
     }
 

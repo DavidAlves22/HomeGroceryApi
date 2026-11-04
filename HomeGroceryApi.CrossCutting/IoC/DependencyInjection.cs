@@ -55,6 +55,14 @@ public static class DependencyInjection
         servicos.AddScoped<ILojaRepository, LojaRepository>();
         servicos.AddScoped<IAssinaturaDePushRepository, AssinaturaDePushRepository>();
         servicos.AddScoped<INotaFiscalRepository, NotaFiscalRepository>();
+        servicos.AddScoped<ICodigoDeRecuperacaoRepository, CodigoDeRecuperacaoRepository>();
+
+        // Recuperação de senha por e-mail (SMTP). Sem Email:Host e Email:De fica desligada.
+        servicos.Configure<EmailOpcoes>(configuracao.GetSection(EmailOpcoes.Secao));
+        servicos.AddSingleton<IEnviadorDeEmail, EnviadorDeEmailSmtp>();
+
+        // Login com Google: Google:ClienteId (Client ID Web do Google Cloud). Sem ele o botão não aparece no app.
+        servicos.AddSingleton<IValidadorDeLoginGoogle, ValidadorDeLoginGoogle>();
 
         // Avisos por Web Push (gratuito). Sem as chaves em Push:ChavePublica/ChavePrivada ficam desligados.
         servicos.Configure<PushOpcoes>(configuracao.GetSection(PushOpcoes.Secao));

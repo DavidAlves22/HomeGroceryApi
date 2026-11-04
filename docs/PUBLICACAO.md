@@ -66,6 +66,26 @@ Para o app avisar "Ana pediu um item" e "compra finalizada" mesmo fechado, a API
 
 Gerar um par novo (Node): `crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' })`, exportar como JWK; a chave privada é o campo `d` e a pública é `04 || x || y`, ambos em base64url. Sem essas variáveis os avisos ficam desligados e o botão não aparece no app (Mais > Avisos neste aparelho). Trocar o par invalida as assinaturas já feitas: cada aparelho precisa ligar os avisos de novo.
 
+## 4c) Recuperar senha por e-mail (opcional, gratuito)
+
+O "Esqueci minha senha" envia um código de 6 dígitos por e-mail, então a API precisa de um servidor SMTP. Um plano gratuito de provedor (ex.: Brevo, ~300 e-mails/dia) basta: crie a conta, verifique o remetente e gere a chave SMTP. No Render, em **Environment**:
+
+- `Email__Host`: `smtp-relay.brevo.com`
+- `Email__Porta`: `587`
+- `Email__Usuario` e `Email__Senha`: credenciais SMTP do provedor (**segredo**: só no Render)
+- `Email__De`: o remetente verificado
+
+Sem `Email__Host` a recuperação fica desligada (`GET /autenticacao/recuperacao` devolve `disponivel: false`) e o app esconde o botão. Ainda não foi testado com um provedor real.
+
+## 4d) Entrar com Google (opcional, gratuito)
+
+1. No [Google Cloud Console](https://console.cloud.google.com), crie um projeto (ex.: "Home Grocery").
+2. **APIs e serviços > Tela de permissão OAuth**: tipo **Externo**, preencha nome do app e e-mails. Escopos: só os básicos (e-mail, perfil, openid; não exigem verificação). Depois **publique o app** (Em produção), senão só os "usuários de teste" conseguem entrar.
+3. **Credenciais > Criar credenciais > ID do cliente OAuth > Aplicativo da Web**. Em **Origens JavaScript autorizadas** coloque a URL do app na Vercel (ex.: `https://home-grocery.vercel.app`) e, para testar local, `http://localhost:8081`. **URIs de redirecionamento não são necessários.**
+4. Copie o **ID do cliente** (termina em `.apps.googleusercontent.com`; é público, não é segredo) e no Render, em **Environment**, crie `Google__ClienteId` com ele (vários IDs separados por vírgula).
+
+Sem `Google__ClienteId`, `GET /autenticacao/google` devolve `clienteId: null` e o botão não aparece no app. Quem já tem conta com o mesmo e-mail entra nela; e-mail novo cria a conta e o grupo pessoal.
+
 ## 5) Testar de ponta a ponta
 
 1. Abra o endereço da Vercel no celular. Se o servidor estiver dormindo, aparece **"Acordando o servidor..."**: aguarde até ~1 minuto.

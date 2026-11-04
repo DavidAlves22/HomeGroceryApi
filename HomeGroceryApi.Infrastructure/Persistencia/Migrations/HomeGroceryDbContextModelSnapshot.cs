@@ -87,6 +87,38 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.ToTable("categorias", (string)null);
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.CodigoDeRecuperacao", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UsadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "CriadoEm");
+
+                    b.ToTable("codigos_de_recuperacao", (string)null);
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.Convite", b =>
                 {
                     b.Property<Guid>("Id")

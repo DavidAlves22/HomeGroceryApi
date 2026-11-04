@@ -53,6 +53,25 @@ public sealed class ServicoDeContasFake : IServicoDeContas
     {
         return Task.FromResult(_contas.Values.Select(v => v.Conta).FirstOrDefault(c => c.Id == usuarioId));
     }
+
+    public Task<ContaDoUsuario?> ObterPorEmailAsync(string email, CancellationToken ct)
+    {
+        return Task.FromResult(_contas.TryGetValue(email, out var registro) ? registro.Conta : null);
+    }
+
+    public Task<IReadOnlyList<string>> RedefinirSenhaAsync(Guid usuarioId, string novaSenha, CancellationToken ct)
+    {
+        var chave = _contas.Keys.First(k => _contas[k].Conta.Id == usuarioId);
+        _contas[chave] = (_contas[chave].Conta, novaSenha);
+        return Task.FromResult<IReadOnlyList<string>>([]);
+    }
+
+    public Task AlterarNomeAsync(Guid usuarioId, string nome, CancellationToken ct)
+    {
+        var chave = _contas.Keys.First(k => _contas[k].Conta.Id == usuarioId);
+        _contas[chave] = (_contas[chave].Conta with { Nome = nome }, _contas[chave].Senha);
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class GrupoRepositoryFake : IGrupoRepository
@@ -107,6 +126,12 @@ public sealed class TokenDeRenovacaoRepositoryFake : ITokenDeRenovacaoRepository
     public Task<TokenDeRenovacao?> ObterPorHashAsync(string hash, CancellationToken ct)
     {
         return Task.FromResult(Tokens.FirstOrDefault(t => t.Hash == hash));
+    }
+
+    public Task RevogarTodosDoUsuarioAsync(Guid usuarioId, DateTime agora, CancellationToken ct)
+    {
+        foreach (var token in Tokens.Where(t => t.UsuarioId == usuarioId)) token.Revogar(agora);
+        return Task.CompletedTask;
     }
 }
 

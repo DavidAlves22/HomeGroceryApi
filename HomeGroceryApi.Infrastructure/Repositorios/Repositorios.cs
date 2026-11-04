@@ -104,6 +104,11 @@ public sealed class TokenDeRenovacaoRepository : ITokenDeRenovacaoRepository
     {
         return _contexto.TokensDeRenovacao.FirstOrDefaultAsync(t => t.Hash == hash, ct);
     }
+
+    public Task RevogarTodosDoUsuarioAsync(Guid usuarioId, DateTime agora, CancellationToken ct)
+    {
+        return _contexto.TokensDeRenovacao.Where(t => t.UsuarioId == usuarioId && t.RevogadoEm == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevogadoEm, agora), ct);
+    }
 }
 
 /// <summary>
