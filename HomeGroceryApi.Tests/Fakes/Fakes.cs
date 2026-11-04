@@ -10,6 +10,13 @@ public sealed class RelogioFixo : IRelogio
     public DateTime AgoraUtc { get; set; } = new(2026, 11, 1, 12, 0, 0, DateTimeKind.Utc);
 }
 
+public sealed class AdministradoresFake : IAdministradores
+{
+    public HashSet<string> Emails { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool EhAdministrador(string email) => Emails.Contains(email);
+}
+
 public sealed class TokenServiceFake : ITokenService
 {
     private int _contador;
@@ -70,6 +77,14 @@ public sealed class ServicoDeContasFake : IServicoDeContas
     {
         var chave = _contas.Keys.First(k => _contas[k].Conta.Id == usuarioId);
         _contas[chave] = (_contas[chave].Conta with { Nome = nome }, _contas[chave].Senha);
+        return Task.CompletedTask;
+    }
+
+    public Dictionary<Guid, DateTime> Acessos { get; } = new();
+
+    public Task RegistrarAcessoAsync(Guid usuarioId, DateTime agora, CancellationToken ct)
+    {
+        Acessos[usuarioId] = agora;
         return Task.CompletedTask;
     }
 }

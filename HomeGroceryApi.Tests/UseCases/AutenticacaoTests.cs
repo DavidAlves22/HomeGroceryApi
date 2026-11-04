@@ -15,8 +15,9 @@ public class AutenticacaoTests
     private readonly UnidadeDeTrabalhoFake _unidade = new();
     private readonly TokenServiceFake _tokens = new();
     private readonly RelogioFixo _relogio = new();
+    private readonly AdministradoresFake _administradores = new();
 
-    private EmissorDeSessao Emissor() => new(_tokens, _tokensDeRenovacao);
+    private EmissorDeSessao Emissor() => new(_tokens, _tokensDeRenovacao, _contas, _administradores, _relogio);
 
     private CadastrarUsuario Cadastro() => new(_contas, _grupos, _unidade, Emissor(), _relogio);
 
@@ -101,6 +102,19 @@ public class AutenticacaoTests
 
         Assert.NotEqual(sessao.TokenDeRenovacao, nova.TokenDeRenovacao);
         await Assert.ThrowsAsync<ErroDeAutenticacao>(() => Renovacao().ExecutarAsync(requisicao, default));
+    }
+
+    [Fact]
+    public async Task Sessao_marca_o_ultimo_acesso_e_so_diz_que_e_admin_para_email_da_lista()
+    {
+        _administradores.Emails.Add("dono@exemplo.com");
+
+        var comum = await Cadastro().ExecutarAsync(CadastroValido("maria@exemplo.com"), default);
+        var dono = await Cadastro().ExecutarAsync(CadastroValido("dono@exemplo.com"), default);
+
+        Assert.False(comum.EhAdmin);
+        Assert.True(dono.EhAdmin);
+        Assert.Equal(_relogio.AgoraUtc, _contas.Acessos[comum.Usuario.Id]);
     }
 
     [Fact]

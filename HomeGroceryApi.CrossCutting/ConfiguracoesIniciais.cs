@@ -41,6 +41,8 @@ public static class ConfiguracoesIniciais
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
+                // Sem MapInboundClaims o papel continua chamando "role"; é com esse nome que [Authorize(Roles = ...)] o procura.
+                RoleClaimType = "role",
                 ValidIssuer = jwt.Emissor,
                 ValidAudience = jwt.Audiencia,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.ChaveSecreta)),

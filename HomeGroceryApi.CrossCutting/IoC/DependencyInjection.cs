@@ -41,6 +41,10 @@ public static class DependencyInjection
         servicos.Configure<JwtOpcoes>(configuracao.GetSection(JwtOpcoes.Secao));
 
         servicos.AddSingleton<IRelogio, Relogio>();
+        // Administradores do app: Admin:Emails (variáveis Admin__Emails__0, Admin__Emails__1...). Sem lista, ninguém é admin.
+        servicos.Configure<AdminOpcoes>(configuracao.GetSection(AdminOpcoes.Secao));
+        servicos.AddSingleton<IAdministradores, Administradores>();
+        servicos.AddScoped<IConsultasDeAdmin, ConsultasDeAdmin>();
         servicos.AddSingleton<ITokenService, TokenService>();
         servicos.AddScoped<IServicoDeContas, ServicoDeContas>();
         servicos.AddScoped<IGrupoRepository, GrupoRepository>();

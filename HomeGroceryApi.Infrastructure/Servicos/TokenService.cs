@@ -12,14 +12,18 @@ namespace HomeGroceryApi.Infrastructure.Servicos;
 public sealed class TokenService : ITokenService
 {
     public const string ClaimDoGrupo = "grupo_id";
+    public const string ClaimDoPapel = "role";
+    public const string PapelAdmin = "Admin";
 
     private readonly JwtOpcoes _opcoes;
     private readonly IRelogio _relogio;
+    private readonly IAdministradores _administradores;
 
-    public TokenService(IOptions<JwtOpcoes> opcoes, IRelogio relogio)
+    public TokenService(IOptions<JwtOpcoes> opcoes, IRelogio relogio, IAdministradores administradores)
     {
         _opcoes = opcoes.Value;
         _relogio = relogio;
+        _administradores = administradores;
     }
 
     public (string Token, DateTime ExpiraEm) GerarTokenDeAcesso(Guid usuarioId, string email, Guid grupoId)
@@ -27,14 +31,19 @@ public sealed class TokenService : ITokenService
         var chave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_opcoes.ChaveSecreta));
         var expiraEm = _relogio.AgoraUtc.AddMinutes(_opcoes.MinutosDeValidadeDoToken);
 
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, usuarioId.ToString()),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(ClaimDoGrupo, grupoId.ToString()),
+        };
+
+        // O papel nasce aqui, no servidor, a partir da configuração; nada vindo do cliente chega a este ponto.
+        if (_administradores.EhAdministrador(email)) claims.Add(new Claim(ClaimDoPapel, PapelAdmin));
+
         var descritor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, usuarioId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, email),
-                new Claim(ClaimDoGrupo, grupoId.ToString()),
-            ]),
+            Subject = new ClaimsIdentity(claims),
             Expires = expiraEm,
             Issuer = _opcoes.Emissor,
             Audience = _opcoes.Audiencia,

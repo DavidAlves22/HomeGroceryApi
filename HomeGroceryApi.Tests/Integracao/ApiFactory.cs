@@ -22,6 +22,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public static bool PostgresDisponivel { get; } = TestarPostgres();
 
+    /// <summary>E-mail listado em Admin:Emails nos testes (quem se cadastra com ele vira administrador).</summary>
+    public const string EmailDoAdmin = "dono@teste.com";
+
     public ApiFactory()
     {
         if (!PostgresDisponivel) return;
@@ -29,6 +32,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Variáveis de ambiente valem antes de a API ler a configuração (appsettings fica por baixo delas).
         Environment.SetEnvironmentVariable("ConnectionStrings__Padrao", $"{Servidor};Database={_banco}");
         Environment.SetEnvironmentVariable("Seguranca__TentativasDeAutenticacaoPorMinuto", "100000");
+        Environment.SetEnvironmentVariable("Admin__Emails__0", EmailDoAdmin);
     }
 
     /// <summary>Os avisos por push que a API tentou enviar (o envio de verdade é trocado por este registro).</summary>

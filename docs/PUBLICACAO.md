@@ -121,3 +121,10 @@ Sem `Google__ClienteId`, `GET /autenticacao/google` devolve `clienteId: null` e 
 - **Atualizar:** `git push` na branch `main` → Render e Vercel publicam sozinhos.
 - **Backup:** no Neon, a restauração por histórico é curta no plano gratuito. Para algo importante, exporte periodicamente (`pg_dump` com a URL do Neon).
 - **Trocar a chave de login** (se vazar): Render → Environment → gere novo valor para `Jwt__ChaveSecreta`. Todos terão de entrar de novo.
+
+## 4e) Painel do administrador (opcional)
+
+1. Crie a sua conta no app (ou entre com o Google) **antes** de configurar o painel.
+2. No Render, em **Environment**, crie `Admin__Emails__0` com o e-mail dessa conta (mais administradores: `Admin__Emails__1`...).
+3. Saia e entre de novo no app: em **Mais** aparece "Painel do administrador" (também em `/admin`). Sem a variável o painel fica fechado para todos.
+4. Publique a API ANTES do app: ela aplica a migration que cria "criado em" e "último acesso" nas contas.

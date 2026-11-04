@@ -13,4 +13,5 @@ public sealed record SessaoResposta(
     DateTime ExpiraEm,
     string TokenDeRenovacao,
     UsuarioResposta Usuario,
-    Guid GrupoId);
+    Guid GrupoId,
+    bool EhAdmin = false);

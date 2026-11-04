@@ -10,16 +10,21 @@ namespace HomeGroceryApi.Infrastructure.Servicos;
 /// </summary>
 public sealed class ServicoDeContas : IServicoDeContas
 {
-    private readonly UserManager<ApplicationUser> _usuarios;
+    // Logins seguidos (ex.: abrir o app em duas abas) não precisam gravar o acesso de novo.
+    private static readonly TimeSpan IntervaloMinimoEntreAcessos = TimeSpan.FromMinutes(5);
 
-    public ServicoDeContas(UserManager<ApplicationUser> usuarios)
+    private readonly UserManager<ApplicationUser> _usuarios;
+    private readonly IRelogio _relogio;
+
+    public ServicoDeContas(UserManager<ApplicationUser> usuarios, IRelogio relogio)
     {
         _usuarios = usuarios;
+        _relogio = relogio;
     }
 
     public async Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct)
     {
-        var usuario = new ApplicationUser { Id = Guid.CreateVersion7(), UserName = email, Email = email, Nome = nome };
+        var usuario = new ApplicationUser { Id = Guid.CreateVersion7(), UserName = email, Email = email, Nome = nome, CriadoEm = _relogio.AgoraUtc, UltimoAcessoEm = _relogio.AgoraUtc };
         var resultado = await _usuarios.CreateAsync(usuario, senha);
 
         if (resultado.Succeeded) return new ResultadoDeCriacaoDeConta(usuario.Id, false, []);
@@ -85,6 +90,16 @@ public sealed class ServicoDeContas : IServicoDeContas
     {
         var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString()) ?? throw new InvalidOperationException("Conta não encontrada.");
         usuario.Nome = nome;
+        await _usuarios.UpdateAsync(usuario);
+    }
+
+    public async Task RegistrarAcessoAsync(Guid usuarioId, DateTime agora, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString());
+        if (usuario is null) return;
+        if (usuario.UltimoAcessoEm is { } ultimo && agora - ultimo < IntervaloMinimoEntreAcessos) return;
+
+        usuario.UltimoAcessoEm = agora;
         await _usuarios.UpdateAsync(usuario);
     }
 

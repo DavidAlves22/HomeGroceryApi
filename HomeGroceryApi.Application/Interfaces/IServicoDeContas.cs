@@ -17,4 +17,7 @@ public interface IServicoDeContas
     Task<IReadOnlyList<string>> RedefinirSenhaAsync(Guid usuarioId, string novaSenha, CancellationToken ct);
 
     Task AlterarNomeAsync(Guid usuarioId, string nome, CancellationToken ct);
+
+    /// <summary>Marca o último acesso da conta (login, cadastro ou renovação de sessão).</summary>
+    Task RegistrarAcessoAsync(Guid usuarioId, DateTime agora, CancellationToken ct);
 }

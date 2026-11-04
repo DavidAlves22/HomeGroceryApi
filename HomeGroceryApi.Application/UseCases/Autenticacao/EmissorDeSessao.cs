@@ -13,11 +13,17 @@ public sealed class EmissorDeSessao
 {
     private readonly ITokenService _tokens;
     private readonly ITokenDeRenovacaoRepository _tokensDeRenovacao;
+    private readonly IServicoDeContas _contas;
+    private readonly IAdministradores _administradores;
+    private readonly IRelogio _relogio;
 
-    public EmissorDeSessao(ITokenService tokens, ITokenDeRenovacaoRepository tokensDeRenovacao)
+    public EmissorDeSessao(ITokenService tokens, ITokenDeRenovacaoRepository tokensDeRenovacao, IServicoDeContas contas, IAdministradores administradores, IRelogio relogio)
     {
         _tokens = tokens;
         _tokensDeRenovacao = tokensDeRenovacao;
+        _contas = contas;
+        _administradores = administradores;
+        _relogio = relogio;
     }
 
     public async Task<SessaoResposta> EmitirAsync(ContaDoUsuario conta, Guid grupoId, CancellationToken ct)
@@ -27,7 +33,9 @@ public sealed class EmissorDeSessao
 
         var registro = TokenDeRenovacao.Criar(Guid.CreateVersion7(), conta.Id, _tokens.CalcularHash(renovacao.Token), renovacao.ExpiraEm);
         await _tokensDeRenovacao.AdicionarAsync(registro, ct);
+        await _contas.RegistrarAcessoAsync(conta.Id, _relogio.AgoraUtc, ct);
 
-        return new SessaoResposta(acesso.Token, acesso.ExpiraEm, renovacao.Token, new UsuarioResposta(conta.Id, conta.Nome, conta.Email), grupoId);
+        // Mesmo critério do token (TokenService); serve só para o app decidir se mostra o painel. A proteção real é a da API.
+        return new SessaoResposta(acesso.Token, acesso.ExpiraEm, renovacao.Token, new UsuarioResposta(conta.Id, conta.Nome, conta.Email), grupoId, _administradores.EhAdministrador(conta.Email));
     }
 }
