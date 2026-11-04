@@ -56,6 +56,16 @@ Sem isto o navegador bloqueia as chamadas do app para a API.
 2. Edite `Cors__OrigensPermitidas__0` e coloque o endereço **exato** do app na Vercel: `https://homegrocery-app.vercel.app` (com `https://`, sem barra no final).
 3. Salve. O serviço reinicia sozinho (1–2 min).
 
+## 4b) Avisos no celular (opcional, gratuito)
+
+Para o app avisar "Ana pediu um item" e "compra finalizada" mesmo fechado, a API precisa de um par de chaves VAPID (identifica o servidor perante o serviço de push do navegador). No Render, em **Environment**, adicione:
+
+- `Push__ChavePublica`: a chave pública (vai para o navegador)
+- `Push__ChavePrivada`: a chave privada (**segredo**: só no Render, nunca no GitHub)
+- `Push__Assunto`: `mailto:seu-email`
+
+Gerar um par novo (Node): `crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' })`, exportar como JWK; a chave privada é o campo `d` e a pública é `04 || x || y`, ambos em base64url. Sem essas variáveis os avisos ficam desligados e o botão não aparece no app (Mais > Avisos neste aparelho). Trocar o par invalida as assinaturas já feitas: cada aparelho precisa ligar os avisos de novo.
+
 ## 5) Testar de ponta a ponta
 
 1. Abra o endereço da Vercel no celular. Se o servidor estiver dormindo, aparece **"Acordando o servidor..."**: aguarde até ~1 minuto.

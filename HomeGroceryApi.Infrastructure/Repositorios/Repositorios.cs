@@ -1,6 +1,8 @@
 using HomeGroceryApi.Application.Interfaces;
 using HomeGroceryApi.Domain.Entidades;
+using HomeGroceryApi.Domain.Enums;
 using HomeGroceryApi.Domain.Interfaces;
+using HomeGroceryApi.Domain.ObjetosDeValor;
 using HomeGroceryApi.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -113,20 +115,98 @@ public sealed class UnidadeDeTrabalho : IUnidadeDeTrabalho
 {
     private readonly HomeGroceryDbContext _contexto;
     private readonly INotificador _notificador;
+    private readonly INotificadorDePush _push;
+    private readonly IUsuarioAtual _usuario;
     private readonly ILogger<UnidadeDeTrabalho> _log;
 
-    public UnidadeDeTrabalho(HomeGroceryDbContext contexto, INotificador notificador, ILogger<UnidadeDeTrabalho> log)
+    public UnidadeDeTrabalho(HomeGroceryDbContext contexto, INotificador notificador, INotificadorDePush push, IUsuarioAtual usuario, ILogger<UnidadeDeTrabalho> log)
     {
         _contexto = contexto;
         _notificador = notificador;
+        _push = push;
+        _usuario = usuario;
         _log = log;
     }
 
     public async Task SalvarAsync(CancellationToken ct)
     {
         var avisos = ColetarAvisos();
+        var avisosPush = _push.Habilitado ? ColetarAvisosPush() : [];
         await _contexto.SaveChangesAsync(ct);
         await PublicarAsync(avisos, ct);
+        await EnviarPushAsync(avisosPush, ct);
+    }
+
+    /// <summary>O que gera aviso no celular dos outros: item novo pedido por alguém (fora da criação da lista) e compra finalizada.</summary>
+    private sealed record AvisoPush(Guid GrupoId, Guid? AutorId, bool Finalizada, IReadOnlyList<string> Itens, string? Competencia, Guid ListaId);
+
+    private List<AvisoPush> ColetarAvisosPush()
+    {
+        var entradas = _contexto.ChangeTracker.Entries().Where(e => e.State is EntityState.Added or EntityState.Modified).ToList();
+        var listasNovas = entradas.Where(e => e.State == EntityState.Added).Select(e => e.Entity).OfType<ListaDeCompras>().Select(l => l.Id).ToHashSet();
+        var avisos = new List<AvisoPush>();
+
+        // Itens acrescentados a uma lista que já existia (criar a lista com 30 itens não avisa 30 vezes).
+        var itensNovos = entradas.Where(e => e.State == EntityState.Added).Select(e => e.Entity).OfType<ItemDaLista>().Where(i => !listasNovas.Contains(i.ListaId));
+        foreach (var grupo in itensNovos.GroupBy(i => (i.GrupoId, i.ListaId, i.AdicionadoPorUsuarioId)))
+        {
+            avisos.Add(new AvisoPush(grupo.Key.GrupoId, grupo.Key.AdicionadoPorUsuarioId, false, grupo.Select(i => i.NomeSnapshot).ToList(), null, grupo.Key.ListaId));
+        }
+
+        foreach (var entrada in entradas.Where(e => e.State == EntityState.Modified && e.Entity is ListaDeCompras))
+        {
+            var status = entrada.Property(nameof(ListaDeCompras.Status));
+            var lista = (ListaDeCompras)entrada.Entity;
+            if (!status.IsModified || (StatusDaListaEnum)status.OriginalValue! == StatusDaListaEnum.Finalizada || !lista.Finalizada) continue;
+
+            Guid? autor = null;
+            try
+            {
+                autor = _usuario.UsuarioId;
+            }
+            catch
+            {
+                // Sem usuário na requisição: o aviso sai sem nome.
+            }
+
+            avisos.Add(new AvisoPush(lista.GrupoId, autor, true, [], lista.Competencia, lista.Id));
+        }
+
+        return avisos;
+    }
+
+    private async Task EnviarPushAsync(List<AvisoPush> avisos, CancellationToken ct)
+    {
+        foreach (var aviso in avisos)
+        {
+            try
+            {
+                var destinatarios = await _contexto.Membros.Where(m => m.GrupoId == aviso.GrupoId && m.Ativo && m.UsuarioId != aviso.AutorId).Select(m => m.UsuarioId).ToListAsync(ct);
+                if (destinatarios.Count == 0) continue;
+
+                var nome = aviso.AutorId is { } autor ? (await _contexto.Users.Where(u => u.Id == autor).Select(u => u.Nome).FirstOrDefaultAsync(ct))?.Split(' ')[0] : null;
+                nome = string.IsNullOrWhiteSpace(nome) ? "Alguém" : nome;
+
+                NotificacaoDePush notificacao;
+                if (aviso.Finalizada)
+                {
+                    notificacao = new NotificacaoDePush("Compra finalizada", $"{nome} finalizou a compra de {Competencia.Parse(aviso.Competencia!).Nome}.", "/lista", $"finalizada-{aviso.ListaId:N}");
+                }
+                else
+                {
+                    var titulo = aviso.Itens.Count == 1 ? $"{nome} pediu um item" : $"{nome} adicionou {aviso.Itens.Count} itens";
+                    var corpo = string.Join(", ", aviso.Itens.Take(3)) + (aviso.Itens.Count > 3 ? $" e mais {aviso.Itens.Count - 3}" : string.Empty);
+                    notificacao = new NotificacaoDePush(titulo, corpo, "/lista", $"pedido-{aviso.ListaId:N}");
+                }
+
+                await _push.EnviarAsync(destinatarios, notificacao, ct);
+            }
+            catch (Exception erro)
+            {
+                // O dado já está gravado: um aviso que falha nunca desfaz nem derruba a operação.
+                _log.LogWarning(erro, "Falha ao enviar aviso por push");
+            }
+        }
     }
 
     public async Task ExecutarEmTransacaoAsync(Func<Task> acao, CancellationToken ct)

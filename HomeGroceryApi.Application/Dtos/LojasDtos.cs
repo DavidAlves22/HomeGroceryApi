@@ -62,6 +62,12 @@ public sealed record ItemForaDaRotaResposta(ItemDaListaResposta Item, string Mot
 /// <summary>Item pendente que ficou de fora da rota porque outra pessoa vai pegar.</summary>
 public sealed record ItemDeOutraPessoaResposta(ItemDaListaResposta Item, Guid UsuarioId);
 
+/// <summary>
+/// Onde outra pessoa da divisão está (o lugar do último item que ela marcou neste mercado, ou a entrada) e o
+/// trajeto que ainda falta para ela, para quem acompanha ver os dois caminhos no mesmo mapa.
+/// </summary>
+public sealed record RotaDeOutraPessoaResposta(Guid UsuarioId, PontoDto Posicao, IReadOnlyList<PontoDto> Trilha, int ItensRestantes);
+
 public sealed record RotaResposta(
     Guid LojaId,
     PontoDto Posicao,
@@ -73,4 +79,5 @@ public sealed record RotaResposta(
     IReadOnlyList<ItemForaDaRotaResposta> ForaDaRota,
     int JaCompradosEmOutrosMercados,
     IReadOnlyList<LocalDoItemResposta> LocaisProprios,
-    IReadOnlyList<ItemDeOutraPessoaResposta> ComOutrasPessoas);
+    IReadOnlyList<ItemDeOutraPessoaResposta> ComOutrasPessoas,
+    IReadOnlyList<RotaDeOutraPessoaResposta> RotasDeOutrasPessoas);

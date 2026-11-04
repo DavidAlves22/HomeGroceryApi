@@ -84,3 +84,10 @@ API no Render (Docker) + PostgreSQL no Neon. Variáveis: `ConnectionStrings__Pad
 - `StringDeConexao.Normalizar` aceita a URL `postgresql://...` do Neon.
 - `UseForwardedHeaders` confia no proxy da plataforma (KnownNetworks/KnownProxies limpos): sem isso o rate limit por IP seria compartilhado por todos. Verificado com o contêiner (12 IPs distintos passam; o mesmo IP leva 429 após 10).
 - Imagem Docker validada localmente em modo Production (porta via `PORT`, migrations ao subir, CORS só da origem configurada, Swagger desligado).
+
+## Fase 6 (compra em família) — decisões
+- **Divisão por categoria** (`PUT /listas/{id}/divisao`): coluna `Divisao` (jsonb em texto) na lista, vale só para ela. Item de categoria sem responsável (ou cujo responsável saiu do grupo) é de todos. `RotaRequisicao.UsuarioId` filtra a rota; a resposta traz `comOutrasPessoas` e `rotasDeOutrasPessoas` (posição = lugar do último item que a pessoa marcou no mercado, senão a entrada; mais o trajeto que falta para ela).
+- **Parada no centro da gôndola** (`PlanejadorDeRota.ParadaNoCentro`): no meio do lado comprido; as pontas só se esse corredor não for alcançável. Caixas continuam no ponto mais próximo.
+- **Onde achou**: um único local por produto e mercado (`DefinirLocalDoItem` recusa mais de um).
+- **Cancelar compra** (`DELETE /listas/{id}`): só em andamento; apaga lista e itens.
+- **Avisos por Web Push** (gratuito): `NotificadorDePush` (pacote Lib.Net.Http.WebPush) com chaves VAPID em `Push__ChavePublica`, `Push__ChavePrivada`, `Push__Assunto`. SEM as chaves fica desligado (`GET /notificacoes/chave` dá 404 e o app esconde o botão). `UnidadeDeTrabalho` decide os avisos olhando o ChangeTracker: item novo numa lista que já existia (criar a lista não avisa) e compra finalizada; vão para os outros membros ATIVOS do grupo, nunca para quem fez. Assinaturas em `assinaturas_de_push` (endpoint único; muda de dono se outra conta entra no aparelho); 404/410 do serviço de push apaga a assinatura. Testes usam `NotificadorDePushDeTeste` (fake que registra os avisos).

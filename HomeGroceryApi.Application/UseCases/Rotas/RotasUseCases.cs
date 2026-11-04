@@ -52,7 +52,8 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
         var idsDeOutraPessoa = deOutraPessoa.Select(i => i.Id).ToHashSet();
 
         var pendentes = itens.Where(i => !i.Comprado && !i.LojasSemOItem.Contains(loja.Id) && !idsDeOutraPessoa.Contains(i.Id)).ToList();
-        var demandas = pendentes.Select(i => new DemandaDeRota(i.Id, i.CategoriaId, i.CategoriaId is { } c && ordemDaCategoria.TryGetValue(c, out var ordem) ? ordem : int.MaxValue, locaisPorProduto.GetValueOrDefault(AnaliseDeCompras.Normalizar(i.NomeSnapshot)))).ToList();
+        DemandaDeRota DemandaDe(ItemDaLista i) => new(i.Id, i.CategoriaId, i.CategoriaId is { } c && ordemDaCategoria.TryGetValue(c, out var ordem) ? ordem : int.MaxValue, locaisPorProduto.GetValueOrDefault(AnaliseDeCompras.Normalizar(i.NomeSnapshot)));
+        var demandas = pendentes.Select(DemandaDe).ToList();
         // O app mostra "local que você marcou" e usa isto para trocar ou apagar o local.
         var locaisDosItens = pendentes
             .SelectMany(i => (locaisPorProduto.GetValueOrDefault(AnaliseDeCompras.Normalizar(i.NomeSnapshot)) ?? []).Select(l => new LocalDoItemResposta(i.Id, l.SecaoId, l.Lado)))
@@ -78,11 +79,29 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
 
         var distancia = Metros(plano.Distancia);
         var tempo = Math.Max(1, (int)Math.Round(distancia / 50.0 + paradas.Sum(x => x.Itens.Count) * 0.4));
+        // Outras pessoas da divisão: onde estão e o que ainda falta andar para elas (só quando a rota é de uma pessoa).
+        var outras = new List<RotaDeOutraPessoaResposta>();
+        if (requisicao.UsuarioId is { } eu)
+        {
+            foreach (var pessoa in lista.ResponsaveisPorCategoria.Values.Where(u => u != eu && membros.Contains(u)).Distinct())
+            {
+                // Posição: o lugar do último item que ela marcou como comprado neste mercado (sem GPS); sem nenhum, a entrada.
+                var ultimo = itens.Where(i => i.Comprado && i.CompradoPorUsuarioId == pessoa && i.CompradoNaLojaId == loja.Id).OrderByDescending(i => i.CompradoEm).FirstOrDefault();
+                var onde = ultimo is null ? loja.Entrada : PlanejadorDeRota.Planejar(loja, secoes, vinculos, [DemandaDe(ultimo)], loja.Entrada, true).Paradas.FirstOrDefault()?.Posicao ?? loja.Entrada;
+
+                // O que falta para ela: as categorias dela e as de todos (que também entram na rota de qualquer um).
+                var faltam = itens.Where(i => !i.Comprado && !i.LojasSemOItem.Contains(loja.Id) && (ResponsavelDe(i) is null || ResponsavelDe(i) == pessoa)).ToList();
+                var planoDela = PlanejadorDeRota.Planejar(loja, secoes, vinculos, faltam.Select(DemandaDe).ToList(), onde, true);
+                outras.Add(new RotaDeOutraPessoaResposta(pessoa, onde.ParaDto(), planoDela.Trilha.Select(t => t.ParaDto()).ToList(), planoDela.Paradas.Sum(x => x.ItensIds.Count)));
+            }
+        }
+
         return new RotaResposta(
             loja.Id, inicio.ParaDto(), paradas, plano.Trilha.Select(t => t.ParaDto()).ToList(), distancia, Math.Max(0, Metros(seguindoALista.Distancia) - distancia), tempo, fora,
             itens.Count(i => i.Comprado && i.CompradoNaLojaId != loja.Id),
             locaisDosItens,
-            deOutraPessoa.Select(i => new ItemDeOutraPessoaResposta(i.ParaResposta(), ResponsavelDe(i)!.Value)).ToList());
+            deOutraPessoa.Select(i => new ItemDeOutraPessoaResposta(i.ParaResposta(), ResponsavelDe(i)!.Value)).ToList(),
+            outras);
     }
 
     private static int Metros(double celulas) => (int)Math.Round(celulas * PlanejadorDeRota.MetrosPorCelula);

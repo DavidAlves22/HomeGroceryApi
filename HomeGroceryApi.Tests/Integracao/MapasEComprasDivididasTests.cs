@@ -212,6 +212,45 @@ public class MapasEComprasDivididasTests
     }
 
     [PostgresFact]
+    public async Task Rota_mostra_onde_a_outra_pessoa_esta_e_o_trajeto_que_falta_para_ela()
+    {
+        var eu = await _api.NovoUsuarioAsync();
+        var esposa = await _api.NovoUsuarioAsync();
+        var (_, convite) = await eu.PostAsync("/grupo/convites");
+        var (_, sessao) = await esposa.PostAsync("/grupo/entrar", new { codigo = convite.GetProperty("codigo").GetString() });
+        esposa.AplicarSessao(sessao);
+
+        var mercado = await LojaMapeadaAsync(eu, "Mercado A");
+        var acougue = await SecaoDoMercadoAsync(eu, mercado, "Açougue");
+        var lista = await NovaListaAsync(eu);
+        var frango = await NovoItemAsync(eu, lista, "Frango", "Açougue");
+        await NovoItemAsync(eu, lista, "Arroz", "Mercearia");
+        await eu.PutAsync($"/listas/{lista}/divisao", new { atribuicoes = new[] { new { categoriaId = await eu.CategoriaAsync("Açougue"), usuarioId = esposa.Id } } });
+
+        // Sem ter marcado nada, ela está na entrada e ainda falta o frango e o arroz (de todos).
+        var (_, antes) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado, usuarioId = eu.Id });
+        var antesDela = Assert.Single(antes.GetProperty("rotasDeOutrasPessoas").EnumerateArray());
+        Assert.Equal(esposa.Id, antesDela.GetProperty("usuarioId").GetGuid());
+        Assert.Equal(2, antesDela.GetProperty("itensRestantes").GetInt32());
+        Assert.Equal(2, antesDela.GetProperty("posicao").GetProperty("x").GetInt32());
+
+        // Depois de marcar o frango, ela está no açougue e só falta o arroz.
+        await esposa.PutAsync($"/listas/{lista}/itens/{frango}/comprado", new { comprado = true, lojaId = mercado });
+        var (_, depois) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado, usuarioId = eu.Id });
+        var depoisDela = Assert.Single(depois.GetProperty("rotasDeOutrasPessoas").EnumerateArray());
+        Assert.Equal(1, depoisDela.GetProperty("itensRestantes").GetInt32());
+        var pos = depoisDela.GetProperty("posicao");
+        Assert.InRange(pos.GetProperty("x").GetInt32(), 3, 11);
+        Assert.InRange(pos.GetProperty("y").GetInt32(), 2, 6);
+        Assert.True(depoisDela.GetProperty("trilha").GetArrayLength() >= 2);
+
+        // Sem escolher uma pessoa (rota de todos) ou sem divisão, não há outras rotas.
+        var (_, todos) = await eu.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado });
+        Assert.Equal(0, todos.GetProperty("rotasDeOutrasPessoas").GetArrayLength());
+        Assert.Equal(acougue, await SecaoDoMercadoAsync(eu, mercado, "Açougue"));
+    }
+
+    [PostgresFact]
     public async Task Divisao_recusa_pessoa_de_fora_do_grupo_categoria_repetida_e_lista_de_outro_grupo()
     {
         var eu = await _api.NovoUsuarioAsync();

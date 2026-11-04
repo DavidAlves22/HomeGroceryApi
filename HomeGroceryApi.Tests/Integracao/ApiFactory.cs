@@ -1,7 +1,12 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using HomeGroceryApi.Application.Interfaces;
+using HomeGroceryApi.Tests.Fakes;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 
 namespace HomeGroceryApi.Tests.Integracao;
@@ -24,6 +29,18 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Variáveis de ambiente valem antes de a API ler a configuração (appsettings fica por baixo delas).
         Environment.SetEnvironmentVariable("ConnectionStrings__Padrao", $"{Servidor};Database={_banco}");
         Environment.SetEnvironmentVariable("Seguranca__TentativasDeAutenticacaoPorMinuto", "100000");
+    }
+
+    /// <summary>Os avisos por push que a API tentou enviar (o envio de verdade é trocado por este registro).</summary>
+    public NotificadorDePushDeTeste Avisos { get; } = new();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureServices(servicos =>
+        {
+            servicos.RemoveAll<INotificadorDePush>();
+            servicos.AddSingleton<INotificadorDePush>(Avisos);
+        });
     }
 
     public async Task<UsuarioDeTeste> NovoUsuarioAsync(string? email = null)

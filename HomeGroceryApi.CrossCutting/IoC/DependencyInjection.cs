@@ -53,6 +53,12 @@ public static class DependencyInjection
         servicos.AddScoped<IModeloRepository, ModeloRepository>();
         servicos.AddScoped<IListaRepository, ListaRepository>();
         servicos.AddScoped<ILojaRepository, LojaRepository>();
+        servicos.AddScoped<IAssinaturaDePushRepository, AssinaturaDePushRepository>();
+
+        // Avisos por Web Push (gratuito). Sem as chaves em Push:ChavePublica/ChavePrivada ficam desligados.
+        servicos.Configure<PushOpcoes>(configuracao.GetSection(PushOpcoes.Secao));
+        servicos.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
+        servicos.AddScoped<INotificadorDePush, NotificadorDePush>();
 
         return servicos;
     }
