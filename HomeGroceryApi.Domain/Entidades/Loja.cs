@@ -10,6 +10,16 @@ namespace HomeGroceryApi.Domain.Entidades;
 /// </summary>
 public sealed class Loja
 {
+    /// <summary>
+    /// Todo mapa que cumpre a regra entra no catálogo para outros grupos copiarem (a cópia é independente; o original nunca é
+    /// editado por outro grupo). A regra evita mapas errados ou vazios: ao menos 8 seções COM NOME próprio (o nome padrão do
+    /// editor, "Nova seção", não conta) e a cidade preenchida.
+    /// </summary>
+    public const int MinimoDeSecoesParaOCatalogo = 8;
+
+    /// <summary>Nome que o editor dá a uma seção recém-criada; seção que ainda o tem não conta para o catálogo.</summary>
+    public const string NomePadraoDaSecao = "Nova seção";
+
     public Guid Id { get; private set; }
     public Guid GrupoId { get; private set; }
     public string Nome { get; private set; } = string.Empty;
@@ -31,9 +41,6 @@ public sealed class Loja
 
     /// <summary>Cidade em minúsculas e sem acento ("Sao Paulo" acha "São Paulo"): é o que o filtro do catálogo compara.</summary>
     public string? CidadeBusca { get; private set; }
-
-    /// <summary>Aparece no catálogo para outros grupos copiarem (quem copia recebe uma cópia independente; o original nunca é editado por outro grupo). Padrão: ligado.</summary>
-    public bool Compartilhada { get; private set; } = true;
 
     /// <summary>Mapa do catálogo de onde esta cópia nasceu (serve para contar quantas vezes o mapa foi copiado).</summary>
     public Guid? OrigemId { get; private set; }
@@ -73,12 +80,6 @@ public sealed class Loja
     public void DefinirCnpj(string? cnpj)
     {
         Cnpj = cnpj;
-    }
-
-    /// <summary>Não mexe na versão: compartilhar não é editar o desenho.</summary>
-    public void DefinirCompartilhada(bool compartilhada)
-    {
-        Compartilhada = compartilhada;
     }
 
     public void Excluir(DateTime agora)

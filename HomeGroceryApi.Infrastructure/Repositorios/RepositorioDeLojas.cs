@@ -17,7 +17,8 @@ public sealed class LojaRepository : ILojaRepository
 
     public async Task<List<ItemDoCatalogo>> ListarCatalogoAsync(Guid grupoIdDoUsuario, string? busca, string? cidade, int limite, CancellationToken ct)
     {
-        var consulta = _contexto.Lojas.AsNoTracking().Where(l => l.Compartilhada && l.ExcluidoEm == null && l.GrupoId != grupoIdDoUsuario && l.Cidade != null && (l.OrigemId == null || l.Versao > 1) && _contexto.Secoes.Any(s => s.LojaId == l.Id));
+        var consulta = ElegiveisParaOCatalogo().Where(l => l.GrupoId != grupoIdDoUsuario);
+        var nomePadrao = Loja.NomePadraoDaSecao.ToLowerInvariant();
         if (!string.IsNullOrWhiteSpace(busca))
         {
             var padrao = "%" + busca.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
@@ -31,7 +32,7 @@ public sealed class LojaRepository : ILojaRepository
         }
 
         var linhas = await consulta
-            .Select(l => new { Loja = l, Secoes = _contexto.Secoes.Count(s => s.LojaId == l.Id), Copias = _contexto.Lojas.Count(c => c.OrigemId == l.Id && c.ExcluidoEm == null) })
+            .Select(l => new { Loja = l, Secoes = _contexto.Secoes.Count(s => s.LojaId == l.Id && s.Nome.Trim().ToLower() != nomePadrao), Copias = _contexto.Lojas.Count(c => c.OrigemId == l.Id && c.ExcluidoEm == null) })
             .OrderByDescending(x => x.Copias).ThenBy(x => x.Loja.Nome)
             .Take(limite)
             .ToListAsync(ct);
@@ -44,9 +45,20 @@ public sealed class LojaRepository : ILojaRepository
         _contexto.SecaoCategorias.RemoveRange(vinculos);
     }
 
+    /// <summary>
+    /// O que pode aparecer no catálogo: não excluído, com cidade, ao menos 8 seções com nome próprio e (se for cópia) já
+    /// editado. Fica numa consulta só para a lista, o detalhe e a cópia nunca discordarem.
+    /// </summary>
+    private IQueryable<Loja> ElegiveisParaOCatalogo()
+    {
+        var nomePadrao = Loja.NomePadraoDaSecao.ToLowerInvariant();
+        return _contexto.Lojas.AsNoTracking().Where(l => l.ExcluidoEm == null && l.Cidade != null && (l.OrigemId == null || l.Versao > 1)
+            && _contexto.Secoes.Count(s => s.LojaId == l.Id && s.Nome.Trim().ToLower() != nomePadrao) >= Loja.MinimoDeSecoesParaOCatalogo);
+    }
+
     public Task<Loja?> ObterDoCatalogoAsync(Guid id, CancellationToken ct)
     {
-        return _contexto.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id && l.Compartilhada && l.ExcluidoEm == null, ct);
+        return ElegiveisParaOCatalogo().FirstOrDefaultAsync(l => l.Id == id, ct);
     }
 
     public Task<int> ContarCopiasAsync(Guid lojaId, CancellationToken ct)

@@ -118,7 +118,7 @@ public static class Mapeamentos
 
     public static AreaDoMapa ParaArea(this AreaDto a) => new(a.X, a.Y, a.Largura, a.Altura);
 
-    public static LojaResumoResposta ParaResumo(this Loja l, int secoes) => new(l.Id, l.Nome, l.Largura, l.Altura, secoes, l.Versao, l.Cnpj, l.Compartilhada, l.Cidade);
+    public static LojaResumoResposta ParaResumo(this Loja l, int secoes) => new(l.Id, l.Nome, l.Largura, l.Altura, secoes, l.Versao, l.Cnpj, l.Cidade);
 
     public static LojaResposta ParaResposta(this Loja loja, IReadOnlyList<Secao> secoes, IReadOnlyList<SecaoCategoria> vinculos)
     {
@@ -128,7 +128,7 @@ public static class Mapeamentos
                 vinculos.Where(v => v.SecaoId == s.Id && v.Lado == LadoDaSecaoEnum.A).Select(v => v.CategoriaId).ToList(),
                 vinculos.Where(v => v.SecaoId == s.Id && v.Lado == LadoDaSecaoEnum.B).Select(v => v.CategoriaId).ToList()))
             .ToList();
-        return new LojaResposta(loja.Id, loja.Nome, loja.Largura, loja.Altura, loja.Entrada.ParaDto(), loja.Caixas.ParaDto(), respostas, loja.Versao, loja.Compartilhada, loja.Cidade);
+        return new LojaResposta(loja.Id, loja.Nome, loja.Largura, loja.Altura, loja.Entrada.ParaDto(), loja.Caixas.ParaDto(), respostas, loja.Versao, loja.Cidade);
     }
 
     public static ListaResumoResposta ParaResposta(this ResumoDeLista r)

@@ -433,11 +433,6 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .HasMaxLength(14)
                         .HasColumnType("character varying(14)");
 
-                    b.Property<bool>("Compartilhada")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<int>("EntradaX")
                         .HasColumnType("integer");
 

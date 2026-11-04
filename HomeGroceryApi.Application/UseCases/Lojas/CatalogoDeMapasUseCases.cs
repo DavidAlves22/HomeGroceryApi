@@ -9,7 +9,7 @@ using HomeGroceryApi.Domain.Interfaces;
 namespace HomeGroceryApi.Application.UseCases.Lojas;
 
 /// <summary>
-/// Catálogo de mapas: todo mapa de mercado criado por qualquer grupo fica disponível para outros grupos COPIAREM.
+/// Catálogo de mapas: todo mapa de mercado de qualquer grupo que cumpre a regra do catálogo (ver Loja) fica disponível para outros grupos COPIAREM.
 /// A cópia é independente (quem copia edita a sua; o original nunca muda por mão alheia). O catálogo não revela quem criou.
 /// O que é do grupo (locais de produto, listas, compras) nunca sai dele: só o desenho e as categorias de cada seção.
 /// </summary>
@@ -140,31 +140,5 @@ public sealed class CopiarMercadoDoCatalogo
             var candidato = (nome.Length + sufixo.Length > 120 ? nome[..(120 - sufixo.Length)] : nome) + sufixo;
             if (!existentes.Contains(candidato)) return candidato;
         }
-    }
-}
-
-/// <summary>Liga ou desliga a presença do mapa do grupo no catálogo. Quem já copiou continua com a sua cópia.</summary>
-public sealed class CompartilharLoja
-{
-    private readonly ILojaRepository _lojas;
-    private readonly IUnidadeDeTrabalho _unidade;
-    private readonly IUsuarioAtual _usuario;
-
-    public CompartilharLoja(ILojaRepository lojas, IUnidadeDeTrabalho unidade, IUsuarioAtual usuario)
-    {
-        _lojas = lojas;
-        _unidade = unidade;
-        _usuario = usuario;
-    }
-
-    public async Task<LojaResumoResposta> ExecutarAsync(Guid id, CompartilharLojaRequisicao requisicao, CancellationToken ct)
-    {
-        var loja = await _lojas.ObterAsync(_usuario.GrupoId, id, ct);
-        if (loja is null || loja.ExcluidoEm is not null) throw new ErroDeNaoEncontrado("Mercado não encontrado.");
-
-        loja.DefinirCompartilhada(requisicao.Compartilhada);
-        await _unidade.SalvarAsync(ct);
-        var secoes = await _lojas.ListarSecoesAsync(_usuario.GrupoId, id, ct);
-        return loja.ParaResumo(secoes.Count);
     }
 }

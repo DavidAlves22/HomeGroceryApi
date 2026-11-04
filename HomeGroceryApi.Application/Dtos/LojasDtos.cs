@@ -33,11 +33,9 @@ public sealed record SecaoResposta(
     IReadOnlyList<Guid> CategoriasLadoA,
     IReadOnlyList<Guid> CategoriasLadoB);
 
-public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao, string? Cnpj = null, bool Compartilhada = true, string? Cidade = null);
+public sealed record LojaResumoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Versao, string? Cnpj = null, string? Cidade = null);
 
-public sealed record LojaResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoResposta> Secoes, int Versao, bool Compartilhada = true, string? Cidade = null);
-
-public sealed record CompartilharLojaRequisicao(bool Compartilhada);
+public sealed record LojaResposta(Guid Id, string Nome, int Largura, int Altura, PontoDto Entrada, AreaDto Caixas, IReadOnlyList<SecaoResposta> Secoes, int Versao, string? Cidade = null);
 
 /// <summary>Item da lista do catálogo de mapas (sem nenhum dado de quem criou).</summary>
 public sealed record CatalogoMercadoResposta(Guid Id, string Nome, int Largura, int Altura, int Secoes, int Copias, string? Cidade = null);

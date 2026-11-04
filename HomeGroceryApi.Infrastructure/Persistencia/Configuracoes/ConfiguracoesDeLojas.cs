@@ -14,7 +14,6 @@ public sealed class LojaConfiguracao : IEntityTypeConfiguration<Loja>
         builder.Property(l => l.Nome).HasMaxLength(120).IsRequired();
         builder.Property(l => l.Versao).IsConcurrencyToken();
         builder.Property(l => l.Cnpj).HasMaxLength(14);
-        builder.Property(l => l.Compartilhada).HasDefaultValue(true);
         builder.HasIndex(l => l.OrigemId);
         builder.Property(l => l.Cidade).HasMaxLength(80);
         builder.Property(l => l.CidadeBusca).HasMaxLength(80);

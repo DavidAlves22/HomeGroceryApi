@@ -35,13 +35,6 @@ public sealed class LojasController : ControllerBase
         return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
     }
 
-    /// <summary>Liga/desliga a presença do mapa no catálogo (ligado por padrão).</summary>
-    [HttpPut("{id:guid}/compartilhamento")]
-    public async Task<ActionResult<LojaResumoResposta>> Compartilhar(Guid id, [FromBody] CompartilharLojaRequisicao requisicao, [FromServices] CompartilharLoja casoDeUso, CancellationToken ct)
-    {
-        return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
-    }
-
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Excluir(Guid id, [FromServices] ExcluirLoja casoDeUso, CancellationToken ct)
     {

@@ -8,7 +8,7 @@ public sealed record ItemDoCatalogo(Loja Loja, int Secoes, int Copias);
 public interface ILojaRepository
 {
     /// <summary>
-    /// Mapas de OUTROS grupos que estão compartilhados, têm cidade, têm seções e não são cópia intocada (uma cópia só entra no catálogo
+    /// Mapas de OUTROS grupos com cidade, com ao menos 8 seções de nome próprio (não "Nova seção") e que não são cópia intocada (uma cópia só entra no catálogo
     /// depois de editada, para não encher de repetidos). Os mais copiados primeiro; busca filtra pelo nome e cidade pela cidade (sem acento nem maiúscula).
     /// </summary>
     Task<List<ItemDoCatalogo>> ListarCatalogoAsync(Guid grupoIdDoUsuario, string? busca, string? cidade, int limite, CancellationToken ct);
