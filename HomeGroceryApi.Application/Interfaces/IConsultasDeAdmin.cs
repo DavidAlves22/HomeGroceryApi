@@ -13,5 +13,8 @@ public interface IConsultasDeAdmin
     /// <summary>Contagens por dia (dia de Brasília) dos últimos <paramref name="dias"/> dias, incluindo hoje.</summary>
     Task<AdminSeriesResposta> SeriesAsync(DateTime agora, int dias, CancellationToken ct);
 
+    /// <summary>Retenção, funil, gastos, rankings e adoção de recursos. Só contagens e nomes de produto/mercado, nunca quem comprou.</summary>
+    Task<AdminInsightsResposta> InsightsAsync(DateTime agora, CancellationToken ct);
+
     Task<AdminUsuariosResposta> UsuariosAsync(int pagina, int tamanho, CancellationToken ct);
 }

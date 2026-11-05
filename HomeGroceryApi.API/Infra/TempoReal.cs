@@ -14,10 +14,12 @@ namespace HomeGroceryApi.API.Infra;
 public sealed class GrupoHub : Hub
 {
     private readonly IGrupoRepository _grupos;
+    private readonly IServicoDeContas _contas;
 
-    public GrupoHub(IGrupoRepository grupos)
+    public GrupoHub(IGrupoRepository grupos, IServicoDeContas contas)
     {
         _grupos = grupos;
+        _contas = contas;
     }
 
     public static string QuartoDoGrupo(Guid grupoId) => $"grupo:{grupoId}";
@@ -30,7 +32,7 @@ public sealed class GrupoHub : Hub
         var grupo = Guid.TryParse(Context.User?.FindFirst(TokenService.ClaimDoGrupo)?.Value, out var g) ? g : Guid.Empty;
 
         // Mesma regra das rotas HTTP: só entra no quarto do grupo quem ainda é membro ativo dele.
-        if (usuario == Guid.Empty || grupo == Guid.Empty || !await _grupos.EhMembroAtivoAsync(usuario, grupo, Context.ConnectionAborted))
+        if (usuario == Guid.Empty || grupo == Guid.Empty || await _contas.EstaBloqueadaAsync(usuario, Context.ConnectionAborted) || !await _grupos.EhMembroAtivoAsync(usuario, grupo, Context.ConnectionAborted))
         {
             Context.Abort();
             return;
@@ -85,7 +87,7 @@ public sealed class ValidarMembroDoGrupoMiddleware
         _proximo = proximo;
     }
 
-    public async Task InvokeAsync(HttpContext contexto, IGrupoRepository grupos)
+    public async Task InvokeAsync(HttpContext contexto, IGrupoRepository grupos, IServicoDeContas contas)
     {
         // Login e renovação precisam passar: é por eles que alguém removido do grupo recebe o grupo certo.
         if (contexto.Request.Path.StartsWithSegments("/autenticacao"))
@@ -98,8 +100,9 @@ public sealed class ValidarMembroDoGrupoMiddleware
         var grupo = contexto.User.FindFirst(TokenService.ClaimDoGrupo)?.Value;
 
         if (contexto.User.Identity?.IsAuthenticated == true && Guid.TryParse(usuario, out var usuarioId) && Guid.TryParse(grupo, out var grupoId)
-            && !await grupos.EhMembroAtivoAsync(usuarioId, grupoId, contexto.RequestAborted))
+            && (await contas.EstaBloqueadaAsync(usuarioId, contexto.RequestAborted) || !await grupos.EhMembroAtivoAsync(usuarioId, grupoId, contexto.RequestAborted)))
         {
+            // Conta bloqueada também cai aqui: o 401 faz o app tentar renovar, a renovação é recusada e a pessoa volta ao login.
             contexto.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await contexto.Response.WriteAsJsonAsync(new { title = "Não autenticado", status = 401, detail = "Seu acesso a este grupo mudou. Entre novamente." }, contexto.RequestAborted);
             return;

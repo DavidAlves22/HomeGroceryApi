@@ -1,4 +1,5 @@
 using HomeGroceryApi.Application.Dtos;
+using HomeGroceryApi.Application.Excecoes;
 using HomeGroceryApi.Application.Interfaces;
 using HomeGroceryApi.Domain.Entidades;
 using HomeGroceryApi.Domain.Interfaces;
@@ -28,6 +29,9 @@ public sealed class EmissorDeSessao
 
     public async Task<SessaoResposta> EmitirAsync(ContaDoUsuario conta, Guid grupoId, CancellationToken ct)
     {
+        // Todo caminho de entrada (cadastro, login, Google, renovação) passa por aqui: um só lugar barra a conta bloqueada.
+        if (conta.Bloqueada) throw new ErroDeAutenticacao("Esta conta foi bloqueada. Fale com o administrador do app.");
+
         var acesso = _tokens.GerarTokenDeAcesso(conta.Id, conta.Email, grupoId);
         var renovacao = _tokens.GerarTokenDeRenovacao();
 

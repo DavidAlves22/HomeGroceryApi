@@ -46,19 +46,37 @@ public sealed class ServicoDeContas : IServicoDeContas
         }
 
         await _usuarios.ResetAccessFailedCountAsync(usuario);
-        return new ContaDoUsuario(usuario.Id, usuario.Nome, usuario.Email!);
+        return ParaConta(usuario);
     }
 
     public async Task<ContaDoUsuario?> ObterPorIdAsync(Guid usuarioId, CancellationToken ct)
     {
         var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString());
-        return usuario is null ? null : new ContaDoUsuario(usuario.Id, usuario.Nome, usuario.Email!);
+        return usuario is null ? null : ParaConta(usuario);
     }
 
     public async Task<ContaDoUsuario?> ObterPorEmailAsync(string email, CancellationToken ct)
     {
         var usuario = await _usuarios.FindByEmailAsync(email);
-        return usuario is null ? null : new ContaDoUsuario(usuario.Id, usuario.Nome, usuario.Email!);
+        return usuario is null ? null : ParaConta(usuario);
+    }
+
+    private static ContaDoUsuario ParaConta(ApplicationUser usuario) => new(usuario.Id, usuario.Nome, usuario.Email!, usuario.BloqueadoEm is not null);
+
+    public async Task<bool> DefinirBloqueioAsync(Guid usuarioId, DateTime? bloqueadoEm, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString());
+        if (usuario is null) return false;
+
+        usuario.BloqueadoEm = bloqueadoEm;
+        await _usuarios.UpdateAsync(usuario);
+        return true;
+    }
+
+    public async Task<bool> EstaBloqueadaAsync(Guid usuarioId, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString());
+        return usuario is null || usuario.BloqueadoEm is not null;
     }
 
     public async Task<IReadOnlyList<string>> RedefinirSenhaAsync(Guid usuarioId, string novaSenha, CancellationToken ct)

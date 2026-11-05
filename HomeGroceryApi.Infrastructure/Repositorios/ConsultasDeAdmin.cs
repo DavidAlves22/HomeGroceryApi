@@ -77,6 +77,104 @@ public sealed class ConsultasDeAdmin : IConsultasDeAdmin
         return new AdminSeriesResposta(dias, PorDia(cadastros, primeiroDia, dias), PorDia(listas, primeiroDia, dias), PorDia(compras, primeiroDia, dias));
     }
 
+    public async Task<AdminInsightsResposta> InsightsAsync(DateTime agora, CancellationToken ct)
+    {
+        var totalDeContas = await _db.Users.CountAsync(ct);
+
+        // "Voltou" = ainda abria o app pelo menos N dias depois de criar a conta. Contas antigas (de antes do painel)
+        // não têm último acesso e contam como "não voltaram" até entrarem de novo.
+        var retencao = new List<AdminRetencaoLinha>();
+        foreach (var dias in new[] { 1, 7, 30 })
+        {
+            var limite = agora.AddDays(-dias);
+            var elegiveis = await _db.Users.CountAsync(u => u.CriadoEm <= limite, ct);
+            var voltaram = await _db.Users.CountAsync(u => u.CriadoEm <= limite && u.UltimoAcessoEm >= u.CriadoEm.AddDays(dias), ct);
+            retencao.Add(new AdminRetencaoLinha(dias, elegiveis, voltaram));
+        }
+
+        // Os conjuntos de pessoas são pequenos (uma linha por conta), então é mais simples juntá-los aqui.
+        var criaramLista = (await _db.Listas.Select(l => l.CriadoPorUsuarioId).Distinct().ToListAsync(ct)).ToHashSet();
+        var compraram = (await _db.ItensDasListas.Where(i => i.Comprado && i.CompradoPorUsuarioId != null).Select(i => i.CompradoPorUsuarioId!.Value).Distinct().ToListAsync(ct)).ToHashSet();
+        var finalizaram = (await _db.Listas.Where(l => l.Status == StatusDaListaEnum.Finalizada).Select(l => l.CriadoPorUsuarioId).Distinct().ToListAsync(ct)).ToHashSet();
+        var comAtividade = criaramLista.Union(compraram).Count();
+        var funil = new AdminFunil(totalDeContas, criaramLista.Count, compraram.Count, finalizaram.Count, Math.Max(totalDeContas - comAtividade, 0));
+
+        var comGasto = _db.Listas.Where(l => l.Status == StatusDaListaEnum.Finalizada && l.TotalGastoFinal > 0);
+        var comprasComGasto = await comGasto.CountAsync(ct);
+        var medio = comprasComGasto == 0 ? 0m : await comGasto.AverageAsync(l => l.TotalGastoFinal ?? 0m, ct);
+        var porMes = await comGasto
+            .GroupBy(l => l.Competencia)
+            .Select(g => new { Competencia = g.Key, Total = g.Sum(l => l.TotalGastoFinal ?? 0m), Compras = g.Count() })
+            .OrderByDescending(m => m.Competencia)
+            .Take(6)
+            .ToListAsync(ct);
+        var gasto = new AdminGasto(comprasComGasto, Math.Round(medio, 2), porMes.OrderBy(m => m.Competencia).Select(m => new AdminGastoDoMes(m.Competencia, m.Total, m.Compras)).ToList());
+
+        var produtos = await _db.ItensDasListas
+            .Where(i => i.Comprado)
+            .GroupBy(i => i.NomeSnapshot.ToLower())
+            .Select(g => new { Nome = g.Key, Compras = g.Count(), Casas = g.Select(i => i.GrupoId).Distinct().Count() })
+            .OrderByDescending(p => p.Compras).ThenBy(p => p.Nome)
+            .Take(10)
+            .ToListAsync(ct);
+
+        var categorias = await _db.ItensDasListas
+            .Where(i => i.Comprado)
+            .GroupBy(i => i.CategoriaNomeSnapshot)
+            .Select(g => new { Nome = g.Key, Compras = g.Count() })
+            .OrderByDescending(c => c.Compras).ThenBy(c => c.Nome)
+            .Take(8)
+            .ToListAsync(ct);
+
+        var cidades = await _db.Lojas
+            .Where(l => l.ExcluidoEm == null && l.CidadeBusca != null)
+            .GroupBy(l => l.CidadeBusca)
+            .Select(g => new { Cidade = g.Max(l => l.Cidade), Mercados = g.Count() })
+            .OrderByDescending(c => c.Mercados).ThenBy(c => c.Cidade)
+            .Take(8)
+            .ToListAsync(ct);
+
+        var copias = await _db.Lojas
+            .Where(l => l.OrigemId != null)
+            .GroupBy(l => l.OrigemId!.Value)
+            .Select(g => new { OrigemId = g.Key, Copias = g.Count() })
+            .OrderByDescending(c => c.Copias)
+            .Take(5)
+            .ToListAsync(ct);
+        var idsDasOrigens = copias.Select(c => c.OrigemId).ToList();
+        var origens = await _db.Lojas.Where(l => idsDasOrigens.Contains(l.Id)).Select(l => new { l.Id, l.Nome, l.Cidade }).ToDictionaryAsync(l => l.Id, ct);
+
+        // Divisão da compra fica num jsonb em texto dentro da lista; só interessa saber em quais grupos já foi usada.
+        var gruposQueDividiram = (await _db.Listas.Select(l => new { l.GrupoId, l.ResponsaveisPorCategoria }).ToListAsync(ct))
+            .Where(l => l.ResponsaveisPorCategoria.Count > 0)
+            .Select(l => l.GrupoId)
+            .Distinct()
+            .Count();
+
+        var totalDeGrupos = await _db.Grupos.CountAsync(ct);
+        var familias = await _db.Grupos.CountAsync(g => !g.Pessoal && _db.Membros.Count(m => m.GrupoId == g.Id && m.Ativo) >= 2, ct);
+        var adocao = new List<AdminAdocao>
+        {
+            new("familia", familias, totalDeGrupos, "grupos"),
+            new("divisao", gruposQueDividiram, totalDeGrupos, "grupos"),
+            new("mercado", await _db.Lojas.Where(l => l.ExcluidoEm == null).Select(l => l.GrupoId).Distinct().CountAsync(ct), totalDeGrupos, "grupos"),
+            new("nota", await _db.NotasImportadas.Select(n => n.GrupoId).Distinct().CountAsync(ct), totalDeGrupos, "grupos"),
+            new("avisos", await _db.AssinaturasDePush.Select(a => a.UsuarioId).Distinct().CountAsync(ct), totalDeContas, "contas"),
+        };
+
+        return new AdminInsightsResposta(
+            retencao,
+            funil,
+            gasto,
+            produtos.Select(p => new AdminItemDeRanking(Capitalizar(p.Nome), p.Compras, p.Casas)).ToList(),
+            categorias.Select(c => new AdminItemDeRanking(c.Nome, c.Compras, null)).ToList(),
+            cidades.Select(c => new AdminItemDeRanking(c.Cidade ?? string.Empty, c.Mercados, null)).ToList(),
+            copias.Select(c => origens.TryGetValue(c.OrigemId, out var o) ? new AdminItemDeRanking(string.IsNullOrWhiteSpace(o.Cidade) ? o.Nome : $"{o.Nome} ({o.Cidade})", c.Copias, null) : null).OfType<AdminItemDeRanking>().ToList(),
+            adocao);
+    }
+
+    private static string Capitalizar(string texto) => texto.Length == 0 ? texto : char.ToUpper(texto[0], CultureInfo.GetCultureInfo("pt-BR")) + texto[1..];
+
     public async Task<AdminUsuariosResposta> UsuariosAsync(int pagina, int tamanho, CancellationToken ct)
     {
         var total = await _db.Users.CountAsync(ct);
@@ -87,7 +185,7 @@ public sealed class ConsultasDeAdmin : IConsultasDeAdmin
             .ThenBy(u => u.Id)
             .Skip((pagina - 1) * tamanho)
             .Take(tamanho)
-            .Select(u => new { u.Id, u.Nome, Email = u.Email ?? string.Empty, u.CriadoEm, u.UltimoAcessoEm })
+            .Select(u => new { u.Id, u.Nome, Email = u.Email ?? string.Empty, u.CriadoEm, u.UltimoAcessoEm, u.BloqueadoEm })
             .ToListAsync(ct);
 
         var ids = contas.Select(c => c.Id).ToList();
@@ -128,7 +226,8 @@ public sealed class ConsultasDeAdmin : IConsultasDeAdmin
                 grupo?.Nome ?? string.Empty,
                 grupo is null ? 0 : membrosPorGrupo.GetValueOrDefault(grupo.Id),
                 listasPorUsuario.GetValueOrDefault(c.Id),
-                comprasPorUsuario.GetValueOrDefault(c.Id));
+                comprasPorUsuario.GetValueOrDefault(c.Id),
+                c.BloqueadoEm);
         }).ToList();
 
         return new AdminUsuariosResposta(total, pagina, tamanho, itens);

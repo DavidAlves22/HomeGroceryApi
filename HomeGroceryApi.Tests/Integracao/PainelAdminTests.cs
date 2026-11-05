@@ -39,7 +39,7 @@ public class PainelAdminTests
     {
         var comum = await _api.NovoUsuarioAsync();
 
-        foreach (var caminho in new[] { "/admin/resumo", "/admin/series", "/admin/usuarios" })
+        foreach (var caminho in new[] { "/admin/resumo", "/admin/series", "/admin/insights", "/admin/usuarios" })
         {
             var (status, _) = await comum.GetAsync(caminho);
             Assert.Equal(403, status);
@@ -121,5 +121,106 @@ public class PainelAdminTests
         Assert.Equal(1, linha.GetProperty("membrosDoGrupo").GetInt32());
         Assert.True(linha.GetProperty("listasCriadas").GetInt32() >= 1);
         Assert.NotEqual(JsonValueKind.Null, linha.GetProperty("ultimoAcessoEm").ValueKind);
+    }
+
+    private static async Task<JsonElement> LinhaDaContaAsync(UsuarioDeTeste admin, Guid id)
+    {
+        var (_, usuarios) = await admin.GetAsync("/admin/usuarios");
+        return usuarios.GetProperty("itens").EnumerateArray().First(i => i.GetProperty("id").GetGuid() == id);
+    }
+
+    [PostgresFact]
+    public async Task Bloquear_derruba_o_token_a_renovacao_e_o_login_e_liberar_devolve_o_acesso()
+    {
+        var email = $"{Guid.NewGuid():N}@teste.com";
+        var maria = await _api.NovoUsuarioAsync(email);
+        var admin = await AdminAsync();
+        Assert.Equal(200, (await maria.GetAsync("/categorias")).Status);
+        Assert.Equal(JsonValueKind.Null, (await LinhaDaContaAsync(admin, maria.Id)).GetProperty("bloqueadoEm").ValueKind);
+
+        var (statusBloqueio, _) = await admin.PutAsync($"/admin/usuarios/{maria.Id}/bloqueio", new { bloqueado = true });
+
+        Assert.Equal(204, statusBloqueio);
+        Assert.NotEqual(JsonValueKind.Null, (await LinhaDaContaAsync(admin, maria.Id)).GetProperty("bloqueadoEm").ValueKind);
+
+        // O token de acesso que ela já tinha deixa de valer na hora, sem esperar os 30 minutos.
+        Assert.Equal(401, (await maria.GetAsync("/categorias")).Status);
+        Assert.Equal(401, await maria.RenovarAsync());
+
+        var login = await _api.CreateClient().PostAsJsonAsync("/autenticacao/login", new { email, senha = "senha1234" });
+        Assert.Equal(401, (int)login.StatusCode);
+        Assert.Contains("bloqueada", (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+        // Senha errada não revela que a conta existe nem que está bloqueada.
+        var senhaErrada = await _api.CreateClient().PostAsJsonAsync("/autenticacao/login", new { email, senha = "outra-senha-1" });
+        Assert.DoesNotContain("bloqueada", (await senhaErrada.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+        var (statusLiberar, _) = await admin.PutAsync($"/admin/usuarios/{maria.Id}/bloqueio", new { bloqueado = false });
+
+        Assert.Equal(204, statusLiberar);
+        Assert.Equal(JsonValueKind.Null, (await LinhaDaContaAsync(admin, maria.Id)).GetProperty("bloqueadoEm").ValueKind);
+        var voltou = await _api.CreateClient().PostAsJsonAsync("/autenticacao/login", new { email, senha = "senha1234" });
+        Assert.Equal(200, (int)voltou.StatusCode);
+    }
+
+    [PostgresFact]
+    public async Task Administrador_nao_pode_ser_bloqueado_conta_inexistente_da_404_e_usuario_comum_recebe_403()
+    {
+        var admin = await AdminAsync();
+        var comum = await _api.NovoUsuarioAsync();
+
+        var (statusAdmin, _) = await admin.PutAsync($"/admin/usuarios/{admin.Id}/bloqueio", new { bloqueado = true });
+        var (statusInexistente, _) = await admin.PutAsync($"/admin/usuarios/{Guid.NewGuid()}/bloqueio", new { bloqueado = true });
+        var (statusComum, _) = await comum.PutAsync($"/admin/usuarios/{comum.Id}/bloqueio", new { bloqueado = true });
+
+        Assert.Equal(400, statusAdmin);
+        Assert.Equal(404, statusInexistente);
+        Assert.Equal(403, statusComum);
+        Assert.Equal(200, (await admin.GetAsync("/admin/resumo")).Status);
+        Assert.True((await LinhaDaContaAsync(admin, admin.Id)).GetProperty("ehAdmin").GetBoolean());
+        Assert.Equal(200, (await comum.GetAsync("/categorias")).Status);
+    }
+
+    [PostgresFact]
+    public async Task Insights_trazem_funil_gasto_rankings_adocao_e_retencao()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var (_, lista) = await u.PostAsync("/listas", new { competencia = "2026-11", origem = "Zero", permitirDuplicada = true });
+        var listaId = lista.GetProperty("resumo").GetProperty("id").GetGuid();
+        var categoriaId = await u.CategoriaAsync("Mercearia");
+        var (_, item) = await u.PostAsync($"/listas/{listaId}/itens", new { nome = "arroz insights", categoriaId, unidade = "Pacote", quantidade = 2 });
+        var itemId = item.GetProperty("id").GetGuid();
+        await u.PutAsync($"/listas/{listaId}/itens/{itemId}", new { nome = "arroz insights", categoriaId, unidade = "Pacote", quantidade = 2, versao = item.GetProperty("versao").GetInt32(), precoUnitario = 25m });
+        await u.PutAsync($"/listas/{listaId}/itens/{itemId}/comprado", new { comprado = true });
+        await u.PostAsync($"/listas/{listaId}/finalizar");
+
+        var admin = await AdminAsync();
+        var (status, insights) = await admin.GetAsync("/admin/insights");
+
+        Assert.Equal(200, status);
+
+        var retencao = insights.GetProperty("retencao").EnumerateArray().ToList();
+        Assert.Equal([1, 7, 30], retencao.Select(r => r.GetProperty("dias").GetInt32()).ToArray());
+        Assert.All(retencao, r => Assert.True(r.GetProperty("voltaram").GetInt32() <= r.GetProperty("elegiveis").GetInt32()));
+
+        var funil = insights.GetProperty("funil");
+        Assert.True(funil.GetProperty("criaramLista").GetInt32() >= 1);
+        Assert.True(funil.GetProperty("compraram").GetInt32() >= 1);
+        Assert.True(funil.GetProperty("finalizaram").GetInt32() >= 1);
+        Assert.True(funil.GetProperty("criaramLista").GetInt32() <= funil.GetProperty("contas").GetInt32());
+        Assert.True(funil.GetProperty("semAtividade").GetInt32() >= 0);
+
+        var gasto = insights.GetProperty("gasto");
+        Assert.True(gasto.GetProperty("compras").GetInt32() >= 1);
+        Assert.True(gasto.GetProperty("medio").GetDecimal() > 0);
+        var novembro = gasto.GetProperty("porMes").EnumerateArray().First(m => m.GetProperty("competencia").GetString() == "2026-11");
+        Assert.True(novembro.GetProperty("total").GetDecimal() >= 50m);
+
+        var produtos = insights.GetProperty("produtosMaisComprados").EnumerateArray().Select(p => p.GetProperty("quantidade").GetInt32()).ToList();
+        Assert.NotEmpty(produtos);
+        Assert.Equal(produtos.OrderByDescending(q => q), produtos);
+        Assert.All(insights.GetProperty("produtosMaisComprados").EnumerateArray(), p => Assert.True(char.IsUpper(p.GetProperty("nome").GetString()![0]) || !char.IsLetter(p.GetProperty("nome").GetString()![0])));
+
+        Assert.Equal(["familia", "divisao", "mercado", "nota", "avisos"], insights.GetProperty("adocao").EnumerateArray().Select(a => a.GetProperty("recurso").GetString()!).ToArray());
     }
 }

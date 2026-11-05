@@ -80,6 +80,21 @@ public sealed class ServicoDeContasFake : IServicoDeContas
         return Task.CompletedTask;
     }
 
+    public Task<bool> DefinirBloqueioAsync(Guid usuarioId, DateTime? bloqueadoEm, CancellationToken ct)
+    {
+        var chave = _contas.Keys.FirstOrDefault(k => _contas[k].Conta.Id == usuarioId);
+        if (chave is null) return Task.FromResult(false);
+
+        _contas[chave] = (_contas[chave].Conta with { Bloqueada = bloqueadoEm is not null }, _contas[chave].Senha);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> EstaBloqueadaAsync(Guid usuarioId, CancellationToken ct)
+    {
+        var conta = _contas.Values.Select(v => v.Conta).FirstOrDefault(c => c.Id == usuarioId);
+        return Task.FromResult(conta is null || conta.Bloqueada);
+    }
+
     public Dictionary<Guid, DateTime> Acessos { get; } = new();
 
     public Task RegistrarAcessoAsync(Guid usuarioId, DateTime agora, CancellationToken ct)

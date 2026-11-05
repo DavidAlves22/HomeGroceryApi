@@ -27,9 +27,22 @@ public sealed class AdminController : ControllerBase
         return Ok(await casoDeUso.ExecutarAsync(dias, ct));
     }
 
+    [HttpGet("insights")]
+    public async Task<ActionResult<AdminInsightsResposta>> Insights([FromServices] ConsultarInsightsDoPainel casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(ct));
+    }
+
     [HttpGet("usuarios")]
     public async Task<ActionResult<AdminUsuariosResposta>> Usuarios([FromQuery] int pagina, [FromServices] ListarUsuariosDoPainel casoDeUso, CancellationToken ct)
     {
         return Ok(await casoDeUso.ExecutarAsync(pagina, ct));
+    }
+
+    [HttpPut("usuarios/{id:guid}/bloqueio")]
+    public async Task<IActionResult> Bloqueio(Guid id, [FromBody] AdminBloqueioRequisicao requisicao, [FromServices] DefinirBloqueioDeConta casoDeUso, CancellationToken ct)
+    {
+        await casoDeUso.ExecutarAsync(id, requisicao.Bloqueado, ct);
+        return NoContent();
     }
 }

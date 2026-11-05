@@ -20,4 +20,10 @@ public interface IServicoDeContas
 
     /// <summary>Marca o último acesso da conta (login, cadastro ou renovação de sessão).</summary>
     Task RegistrarAcessoAsync(Guid usuarioId, DateTime agora, CancellationToken ct);
+
+    /// <summary>Bloqueia (com a data) ou libera (null) a conta. Devolve false se a conta não existe.</summary>
+    Task<bool> DefinirBloqueioAsync(Guid usuarioId, DateTime? bloqueadoEm, CancellationToken ct);
+
+    /// <summary>Conta inexistente também conta como bloqueada: quem não existe mais não pode seguir usando um token antigo.</summary>
+    Task<bool> EstaBloqueadaAsync(Guid usuarioId, CancellationToken ct);
 }
