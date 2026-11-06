@@ -28,6 +28,9 @@ public readonly partial record struct Competencia
         return new Competencia(texto);
     }
 
+    /// <summary>Nome do mês (1 a 12) em minúsculas, para frases no meio do texto.</summary>
+    public static string NomeDoMes(int mes) => Meses[mes - 1].ToLowerInvariant();
+
     public int Ano => int.Parse(Chave[..4]);
 
     public int Mes => int.Parse(Chave[5..]);

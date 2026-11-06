@@ -105,6 +105,7 @@ public sealed class CriarLista
         var grupoId = _usuario.GrupoId;
         var competencia = Competencia.Parse(requisicao.Competencia);
         var nomeInformado = string.IsNullOrWhiteSpace(requisicao.Nome) ? null : Entrada.Nome(requisicao.Nome, "O nome da lista");
+        if (requisicao.Origem != OrigemDaListaEnum.Sugestao && requisicao.ItensSugeridos is { Count: > 0 }) throw new ErroDeValidacao("Só a origem Sugestão leva itens sugeridos.");
         if (requisicao.Origem != OrigemDaListaEnum.Padrao && requisicao.ItensDoModeloIds is { Count: > 0 }) throw new ErroDeValidacao("Uma lista criada do zero não leva itens da lista padrão.");
 
         var existePrincipal = await _listas.ExistePrincipalAsync(grupoId, competencia.Chave, ct);
@@ -115,6 +116,7 @@ public sealed class CriarLista
         {
             OrigemDaListaEnum.Padrao => await CopiarDoModeloAsync(lista, requisicao.ItensDoModeloIds, ct),
             OrigemDaListaEnum.Copiar => await CopiarDeOutraListaAsync(lista, requisicao, ct),
+            OrigemDaListaEnum.Sugestao => await CriarDaSugestaoAsync(lista, competencia, requisicao, ct),
             _ => [],
         };
 
@@ -142,6 +144,27 @@ public sealed class CriarLista
                 Guid.CreateVersion7(), nova.Id, nova.GrupoId, i.ProdutoId, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot,
                 i.QuantidadePlanejada, posicao, _usuario.UsuarioId, i.PrecoEstimado, i.PrecoUnitario ?? i.PrecoReferencia))
             .ToList();
+    }
+
+    /// <summary>
+    /// A sugestão é recalculada aqui (o app só devolve as chaves escolhidas), então ninguém cria item a partir de dado
+    /// que o cliente inventou. Os itens nascem pendentes; o último preço pago vira só referência.
+    /// </summary>
+    private async Task<List<ItemDaLista>> CriarDaSugestaoAsync(ListaDeCompras nova, Competencia competencia, CriarListaRequisicao requisicao, CancellationToken ct)
+    {
+        var sugestoes = SugestaoDeLista.Calcular(await _listas.ListarItensComCompetenciaAsync(nova.GrupoId, ct), competencia, SugestaoDeLista.DiaDaCompra(_relogio.AgoraUtc));
+        var escolhidos = requisicao.ItensSugeridos ?? sugestoes.Select(s => new ItemSugeridoRequisicao(s.Chave)).ToList();
+
+        var itens = new List<ItemDaLista>();
+        foreach (var escolhido in escolhidos)
+        {
+            var sugestao = sugestoes.FirstOrDefault(s => s.Chave == escolhido.Chave) ?? throw new ErroDeValidacao("Uma das sugestões escolhidas mudou. Atualize a sugestão e tente de novo.");
+            var quantidade = escolhido.Quantidade is null ? sugestao.Quantidade : Entrada.Quantidade(escolhido.Quantidade.Value);
+            var i = sugestao.Referencia;
+            itens.Add(ItemDaLista.Criar(Guid.CreateVersion7(), nova.Id, nova.GrupoId, i.ProdutoId, i.NomeSnapshot, i.CategoriaId, i.CategoriaNomeSnapshot, i.UnidadeSnapshot, quantidade, itens.Count, _usuario.UsuarioId, i.PrecoEstimado, i.PrecoUnitario ?? i.PrecoReferencia));
+        }
+
+        return itens;
     }
 
     private async Task<List<ItemDaLista>> CopiarDoModeloAsync(ListaDeCompras lista, IReadOnlyList<Guid>? idsSelecionados, CancellationToken ct)
@@ -426,5 +449,53 @@ public sealed class ReordenarItensDaLista : CasoDeUsoDeLista
         for (var posicao = 0; posicao < ids.Count; posicao++) itens.First(i => i.Id == ids[posicao]).DefinirOrdem(posicao);
 
         await _unidade.SalvarAsync(ct);
+    }
+}
+
+/// <summary>Sugere os produtos da lista de um mês pelo ritmo de compra de cada um (ver <see cref="SugestaoDeLista"/>).</summary>
+public sealed class ObterSugestaoDeLista
+{
+    private readonly IListaRepository _listas;
+    private readonly IUsuarioAtual _usuario;
+    private readonly IRelogio _relogio;
+
+    public ObterSugestaoDeLista(IListaRepository listas, IUsuarioAtual usuario, IRelogio relogio)
+    {
+        _listas = listas;
+        _usuario = usuario;
+        _relogio = relogio;
+    }
+
+    public async Task<SugestaoDeListaResposta> ExecutarAsync(string competenciaTexto, CancellationToken ct)
+    {
+        var competencia = Competencia.Parse(competenciaTexto);
+        var hoje = SugestaoDeLista.DiaDaCompra(_relogio.AgoraUtc);
+        var sugestoes = SugestaoDeLista.Calcular(await _listas.ListarItensComCompetenciaAsync(_usuario.GrupoId, ct), competencia, hoje);
+
+        return new SugestaoDeListaResposta(competencia.Chave, sugestoes.Select(s => ParaResposta(s, hoje)).ToList());
+    }
+
+    internal static ItemSugeridoResposta ParaResposta(ProdutoSugerido s, DateOnly hoje)
+    {
+        var i = s.Referencia;
+        var atraso = hoje.DayNumber - s.ProximaPrevista.DayNumber;
+        var ritmo = $"Você compra {DescreverCiclo(s.CicloEmDias)} ({s.Compras} compras)";
+        var descricao = s.Motivo == MotivoDaSugestaoEnum.Atrasado
+            ? $"{ritmo}. Última vez em {s.UltimaCompra:dd/MM}, já passou {DescreverDias(atraso)} do previsto."
+            : $"{ritmo}. Última vez em {s.UltimaCompra:dd/MM}.";
+
+        return new ItemSugeridoResposta(s.Chave, i.NomeSnapshot, i.CategoriaNomeSnapshot, i.UnidadeSnapshot.ToString(), s.Quantidade, s.CicloEmDias, s.Compras, s.UltimaCompra, s.ProximaPrevista, s.Motivo.ToString(), descricao, i.PrecoUnitario ?? i.PrecoReferencia, i.CategoriaId);
+    }
+
+    private static string DescreverCiclo(int dias)
+    {
+        if (dias <= 45) return $"a cada ~{dias} {(dias == 1 ? "dia" : "dias")}";
+        var meses = (int)Math.Round(dias / 30.4, MidpointRounding.AwayFromZero);
+        return $"a cada ~{meses} {(meses == 1 ? "mês" : "meses")}";
+    }
+
+    private static string DescreverDias(int dias)
+    {
+        return $"{dias} {(dias == 1 ? "dia" : "dias")}";
     }
 }

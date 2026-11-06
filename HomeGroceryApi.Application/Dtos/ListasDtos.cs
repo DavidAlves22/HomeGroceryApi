@@ -2,7 +2,10 @@ using HomeGroceryApi.Domain.Enums;
 
 namespace HomeGroceryApi.Application.Dtos;
 
-public sealed record CriarListaRequisicao(string Competencia, string? Nome, OrigemDaListaEnum Origem, IReadOnlyList<Guid>? ItensDoModeloIds, bool PermitirDuplicada, Guid? ListaDeOrigemId = null, IReadOnlyList<Guid>? ItensDeOrigemIds = null);
+public sealed record CriarListaRequisicao(string Competencia, string? Nome, OrigemDaListaEnum Origem, IReadOnlyList<Guid>? ItensDoModeloIds, bool PermitirDuplicada, Guid? ListaDeOrigemId = null, IReadOnlyList<Guid>? ItensDeOrigemIds = null, IReadOnlyList<ItemSugeridoRequisicao>? ItensSugeridos = null);
+
+/// <summary>Chave vem de GET /listas/sugestao; Quantidade vazia = a sugerida pelo histórico.</summary>
+public sealed record ItemSugeridoRequisicao(string Chave, decimal? Quantidade = null);
 
 public sealed record ItemDaListaRequisicao(string Nome, Guid CategoriaId, UnidadeDeMedidaEnum Unidade, decimal Quantidade, decimal? PrecoEstimado = null);
 

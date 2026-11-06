@@ -24,6 +24,13 @@ public sealed class ListasController : ControllerBase
         return Ok(await casoDeUso.ExecutarAsync(id, ct));
     }
 
+    /// <summary>Produtos que, pelo ritmo de compra de cada um, devem entrar na lista do mês.</summary>
+    [HttpGet("sugestao")]
+    public async Task<ActionResult<SugestaoDeListaResposta>> Sugestao([FromQuery] string competencia, [FromServices] ObterSugestaoDeLista casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(competencia, ct));
+    }
+
     [HttpPost]
     public async Task<ActionResult<ListaResposta>> Criar([FromBody] CriarListaRequisicao requisicao, [FromServices] CriarLista casoDeUso, CancellationToken ct)
     {

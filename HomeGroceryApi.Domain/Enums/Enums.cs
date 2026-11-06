@@ -22,4 +22,5 @@ public enum OrigemDaListaEnum
     Zero = 1,
     Padrao = 2,
     Copiar = 3,
+    Sugestao = 4,
 }
