@@ -134,6 +134,24 @@ public class NotaFiscalTests
     }
 
     [PostgresFact]
+    public async Task Tres_linhas_iguais_da_nota_somam_quantidade_3_no_mesmo_item()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var (lista, wafer, _) = await ListaComItensAsync(u);
+
+        var (status, resposta) = await u.PostAsync($"/listas/{lista}/nota", new
+        {
+            cnpj = Cnpj,
+            itens = new[] { Item("18835", "MOLHO TOM FUGINI 300G SAC", 1m, 1.95m, itemId: wafer), Item("18835", "MOLHO TOM FUGINI 300G SAC", 1m, 1.95m, itemId: wafer), Item("18835", "MOLHO TOM FUGINI 300G SAC", 1m, 1.95m, itemId: wafer) },
+        });
+
+        Assert.Equal(200, status);
+        var item = resposta.GetProperty("itens").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == wafer);
+        Assert.Equal(3m, item.GetProperty("quantidadeComprada").GetDecimal());
+        Assert.Equal(1.95m, item.GetProperty("precoUnitario").GetDecimal());
+    }
+
+    [PostgresFact]
     public async Task Importar_valida_a_nota_a_lista_e_o_grupo()
     {
         var u = await _api.NovoUsuarioAsync();
