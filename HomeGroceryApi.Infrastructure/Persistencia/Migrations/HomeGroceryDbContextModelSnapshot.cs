@@ -178,6 +178,36 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.ToTable("grupos", (string)null);
                 });
 
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.InformacaoDeContato", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Valor")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("informacoes_de_contato", (string)null);
+                });
+
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.ItemDaLista", b =>
                 {
                     b.Property<Guid>("Id")
@@ -497,6 +527,65 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                         .HasFilter("\"Ativo\" = true");
 
                     b.ToTable("membros_do_grupo", (string)null);
+                });
+
+            modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.MensagemDeContato", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Assunto")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailDoUsuario")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NomeDoUsuario")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime?>("RespondidoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Resposta")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("RespostaVistaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UsuarioId", "CriadoEm");
+
+                    b.ToTable("mensagens_de_contato", (string)null);
                 });
 
             modelBuilder.Entity("HomeGroceryApi.Domain.Entidades.NotaImportada", b =>

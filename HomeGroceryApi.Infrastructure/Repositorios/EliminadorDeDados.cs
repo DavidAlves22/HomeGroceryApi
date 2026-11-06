@@ -41,6 +41,7 @@ public sealed class EliminadorDeDados : IEliminadorDeDados
         await _db.TokensDeRenovacao.Where(t => t.UsuarioId == plano.UsuarioId).ExecuteDeleteAsync(ct);
         await _db.CodigosDeRecuperacao.Where(c => c.UsuarioId == plano.UsuarioId).ExecuteDeleteAsync(ct);
         await _db.AssinaturasDePush.Where(a => a.UsuarioId == plano.UsuarioId).ExecuteDeleteAsync(ct);
+        await _db.MensagensDeContato.Where(m => m.UsuarioId == plano.UsuarioId).ExecuteDeleteAsync(ct);
 
         // As tabelas do Identity (claims, logins, tokens, papéis) saem em cascata junto com o usuário.
         await _db.Users.Where(u => u.Id == plano.UsuarioId).ExecuteDeleteAsync(ct);

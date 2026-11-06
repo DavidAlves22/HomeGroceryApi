@@ -24,3 +24,17 @@ public enum OrigemDaListaEnum
     Copiar = 3,
     Sugestao = 4,
 }
+
+public enum TipoDeMensagemEnum
+{
+    Feedback = 1,
+    Solicitacao = 2,
+}
+
+public enum StatusDaMensagemEnum
+{
+    Recebida = 1,
+    EmAnalise = 2,
+    Respondida = 3,
+    Concluida = 4,
+}

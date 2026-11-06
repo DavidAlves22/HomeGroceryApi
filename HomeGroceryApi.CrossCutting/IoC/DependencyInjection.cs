@@ -61,6 +61,7 @@ public static class DependencyInjection
         servicos.AddScoped<IAssinaturaDePushRepository, AssinaturaDePushRepository>();
         servicos.AddScoped<INotaFiscalRepository, NotaFiscalRepository>();
         servicos.AddScoped<ICodigoDeRecuperacaoRepository, CodigoDeRecuperacaoRepository>();
+        servicos.AddScoped<IContatoRepository, ContatoRepository>();
 
         // Recuperação de senha por e-mail (SMTP). Sem Email:Host e Email:De fica desligada.
         servicos.Configure<EmailOpcoes>(configuracao.GetSection(EmailOpcoes.Secao));

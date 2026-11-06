@@ -65,6 +65,37 @@ public sealed class AdminController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("mensagens")]
+    public async Task<ActionResult<AdminMensagensResposta>> Mensagens([FromServices] ListarMensagensDoPainel casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(ct));
+    }
+
+    [HttpPut("mensagens/{id:guid}")]
+    public async Task<ActionResult<AdminMensagemResposta>> ResponderMensagem(Guid id, [FromBody] AdminResponderMensagemRequisicao requisicao, [FromServices] ResponderMensagemDoPainel casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
+    }
+
+    [HttpPost("contato/informacoes")]
+    public async Task<ActionResult<InformacaoDeContatoResposta>> AdicionarInformacao([FromBody] InformacaoDeContatoRequisicao requisicao, [FromServices] AdicionarInformacaoDeContato casoDeUso, CancellationToken ct)
+    {
+        return StatusCode(StatusCodes.Status201Created, await casoDeUso.ExecutarAsync(requisicao, ct));
+    }
+
+    [HttpPut("contato/informacoes/{id:guid}")]
+    public async Task<ActionResult<InformacaoDeContatoResposta>> AlterarInformacao(Guid id, [FromBody] InformacaoDeContatoRequisicao requisicao, [FromServices] AlterarInformacaoDeContato casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, requisicao, ct));
+    }
+
+    [HttpDelete("contato/informacoes/{id:guid}")]
+    public async Task<IActionResult> RemoverInformacao(Guid id, [FromServices] RemoverInformacaoDeContato casoDeUso, CancellationToken ct)
+    {
+        await casoDeUso.ExecutarAsync(id, ct);
+        return NoContent();
+    }
+
     [HttpPut("usuarios/{id:guid}/bloqueio")]
     public async Task<IActionResult> Bloqueio(Guid id, [FromBody] AdminBloqueioRequisicao requisicao, [FromServices] DefinirBloqueioDeConta casoDeUso, CancellationToken ct)
     {
