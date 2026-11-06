@@ -107,9 +107,18 @@ public sealed class ItemDaLista
     /// <summary>
     /// Compra vinda da nota fiscal: guarda a quantidade e o preço pagos e marca como comprado de uma vez.
     /// Diferente de marcar/desmarcar, sobrescreve preço e quantidade que já existissem (a nota é a fonte da verdade).
+    /// A unidade da nota também manda: se for diferente da do item (Litro x Kg, por exemplo), o item passa a usá-la e a
+    /// quantidade planejada e o preço estimado, que estavam na unidade antiga, são descartados (sem conversão: 1 L não é 1 kg).
     /// </summary>
-    public void RegistrarCompra(decimal quantidadeComprada, decimal precoUnitario, Guid usuarioId, DateTime agora, Guid? lojaId)
+    public void RegistrarCompra(decimal quantidadeComprada, decimal precoUnitario, Guid usuarioId, DateTime agora, Guid? lojaId, UnidadeDeMedidaEnum? unidadeDaNota = null)
     {
+        if (unidadeDaNota is { } unidade && unidade != UnidadeSnapshot)
+        {
+            UnidadeSnapshot = unidade;
+            QuantidadePlanejada = quantidadeComprada;
+            PrecoEstimado = null;
+        }
+
         QuantidadeComprada = quantidadeComprada;
         PrecoUnitario = precoUnitario;
         CompradoEm ??= agora;

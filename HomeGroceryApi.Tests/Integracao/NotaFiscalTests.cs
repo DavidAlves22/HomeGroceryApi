@@ -59,6 +59,23 @@ public class NotaFiscalTests
     }
 
     [PostgresFact]
+    public async Task Unidade_e_valores_da_nota_valem_mais_que_os_do_item_casado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var (lista, _, queijo) = await ListaComItensAsync(u); // o queijo está na lista em Kg, 0,5 planejado
+
+        var (status, resposta) = await u.PostAsync($"/listas/{lista}/nota", new { cnpj = Cnpj, itens = new[] { Item("AR032886", "QJO.M.PADR.TIROLEZ", 2m, 8m, itemId: queijo, unidade: "Litro") } });
+
+        Assert.Equal(200, status);
+        var item = resposta.GetProperty("itens").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == queijo);
+        Assert.Equal("Litro", item.GetProperty("unidade").GetString());
+        Assert.Equal(2m, item.GetProperty("quantidade").GetDecimal());
+        Assert.Equal(2m, item.GetProperty("quantidadeComprada").GetDecimal());
+        Assert.Equal(8m, item.GetProperty("precoUnitario").GetDecimal());
+        Assert.Equal(16m, resposta.GetProperty("totais").GetProperty("realizado").GetDecimal());
+    }
+
+    [PostgresFact]
     public async Task Os_pares_codigo_produto_ficam_guardados_para_as_proximas_notas_do_mesmo_mercado()
     {
         var u = await _api.NovoUsuarioAsync();

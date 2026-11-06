@@ -141,7 +141,7 @@ public sealed class ImportarNotaNaLista : CasoDeUsoDeLista
             if (!itensDaLista.TryGetValue(grupo.Key, out var item)) throw new ErroDeNaoEncontrado("Um item da lista não foi encontrado.");
             var quantidade = grupo.Sum(p => p.Quantidade);
             var valor = grupo.Sum(p => p.Quantidade * p.PrecoUnitario);
-            item.RegistrarCompra(quantidade, decimal.Round(valor / quantidade, 2, MidpointRounding.AwayFromZero), Usuario.UsuarioId, agora, requisicao.LojaId);
+            item.RegistrarCompra(quantidade, decimal.Round(valor / quantidade, 2, MidpointRounding.AwayFromZero), Usuario.UsuarioId, agora, requisicao.LojaId, grupo.First().Unidade);
             await GuardarVinculoAsync(cnpj, grupo.Select(p => p.Codigo), item.ProdutoId, vinculos, ct);
         }
 

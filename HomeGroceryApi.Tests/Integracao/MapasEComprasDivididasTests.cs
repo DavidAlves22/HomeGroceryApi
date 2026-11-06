@@ -444,6 +444,23 @@ public class MapasEComprasDivididasTests
     }
 
     [PostgresFact]
+    public async Task Corrigir_o_mercado_de_um_item_ja_comprado_troca_so_o_mercado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercadoA = await LojaMapeadaAsync(u, "Mercado A");
+        var mercadoB = await LojaMapeadaAsync(u, "Mercado B");
+        var lista = await NovaListaAsync(u);
+        var arroz = await NovoItemAsync(u, lista, "Arroz", "Mercearia");
+        await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercadoA });
+
+        var (status, corrigido) = await u.PutAsync($"/listas/{lista}/itens/{arroz}/comprado", new { comprado = true, lojaId = mercadoB });
+
+        Assert.Equal(200, status);
+        Assert.True(corrigido.GetProperty("comprado").GetBoolean());
+        Assert.Equal(mercadoB, corrigido.GetProperty("compradoNaLojaId").GetGuid());
+    }
+
+    [PostgresFact]
     public async Task Marcar_comprado_exige_mercado_do_proprio_grupo()
     {
         var dona = await _api.NovoUsuarioAsync();
