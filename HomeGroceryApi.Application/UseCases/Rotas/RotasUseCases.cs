@@ -54,8 +54,9 @@ public sealed class PlanejarRotaDaLista : CasoDeUsoDeLista
         var pendentes = itens.Where(i => !i.Comprado && !i.LojasSemOItem.Contains(loja.Id) && !idsDeOutraPessoa.Contains(i.Id)).ToList();
         DemandaDeRota DemandaDe(ItemDaLista i) => new(i.Id, i.CategoriaId, i.CategoriaId is { } c && ordemDaCategoria.TryGetValue(c, out var ordem) ? ordem : int.MaxValue, locaisPorProduto.GetValueOrDefault(AnaliseDeCompras.Normalizar(i.NomeSnapshot)));
         var demandas = pendentes.Select(DemandaDe).ToList();
-        // O app mostra "local que você marcou" e usa isto para trocar ou apagar o local.
-        var locaisDosItens = pendentes
+        // O app mostra "local que você marcou" e usa isto para trocar ou apagar o local; vale também para o que já foi
+        // comprado neste mercado (dá para dizer onde achou depois de comprar).
+        var locaisDosItens = pendentes.Concat(itens.Where(i => i.Comprado && i.CompradoNaLojaId == loja.Id))
             .SelectMany(i => (locaisPorProduto.GetValueOrDefault(AnaliseDeCompras.Normalizar(i.NomeSnapshot)) ?? []).Select(l => new LocalDoItemResposta(i.Id, l.SecaoId, l.Lado)))
             .ToList();
         var inicio = requisicao.Posicao is { } p ? new PontoDoMapa(p.X, p.Y) : loja.Entrada;

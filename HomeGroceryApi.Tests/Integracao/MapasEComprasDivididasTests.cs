@@ -309,6 +309,25 @@ public class MapasEComprasDivididasTests
     }
 
     [PostgresFact]
+    public async Task Depois_de_comprar_ainda_da_para_dizer_onde_o_produto_estava_naquele_mercado()
+    {
+        var u = await _api.NovoUsuarioAsync();
+        var mercado = await LojaMapeadaAsync(u, "Mercado A");
+        var acougue = await SecaoDoMercadoAsync(u, mercado, "Açougue");
+        var lista = await NovaListaAsync(u);
+        var pao = await NovoItemAsync(u, lista, "Pão", "Padaria");
+        await u.PutAsync($"/listas/{lista}/itens/{pao}/comprado", new { comprado = true, lojaId = mercado });
+
+        var (status, _) = await u.PutAsync($"/listas/{lista}/itens/{pao}/local", new { lojaId = mercado, locais = new[] { new { secaoId = acougue, lado = "A" } } });
+        var (_, rota) = await u.PostAsync($"/listas/{lista}/rota", new { lojaId = mercado });
+
+        Assert.Equal(200, status);
+        var proprio = Assert.Single(rota.GetProperty("locaisProprios").EnumerateArray());
+        Assert.Equal(pao, proprio.GetProperty("itemId").GetGuid());
+        Assert.Equal(acougue, proprio.GetProperty("secaoId").GetGuid());
+    }
+
+    [PostgresFact]
     public async Task Produto_tem_um_unico_local_por_mercado_e_marcar_outro_descarta_o_anterior()
     {
         var u = await _api.NovoUsuarioAsync();
