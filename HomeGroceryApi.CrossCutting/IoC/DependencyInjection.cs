@@ -45,6 +45,7 @@ public static class DependencyInjection
         servicos.Configure<AdminOpcoes>(configuracao.GetSection(AdminOpcoes.Secao));
         servicos.AddSingleton<IAdministradores, Administradores>();
         servicos.AddScoped<IConsultasDeAdmin, ConsultasDeAdmin>();
+        servicos.AddScoped<IEliminadorDeDados, EliminadorDeDados>();
         servicos.AddSingleton<ITokenService, TokenService>();
         servicos.AddScoped<IServicoDeContas, ServicoDeContas>();
         servicos.AddScoped<IGrupoRepository, GrupoRepository>();
@@ -89,6 +90,7 @@ public static class DependencyInjection
 
         servicos.AddScoped<CatalogoDeProdutos>();
         servicos.AddScoped<ServicoDeGrupoAtivo>();
+        servicos.AddScoped<ServicoDeExclusaoDeConta>();
         return servicos;
     }
 }

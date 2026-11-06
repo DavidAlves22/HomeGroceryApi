@@ -61,6 +61,11 @@ public sealed class LojaRepository : ILojaRepository
         return ElegiveisParaOCatalogo().FirstOrDefaultAsync(l => l.Id == id, ct);
     }
 
+    public Task<Loja?> ObterParaModeracaoAsync(Guid id, CancellationToken ct)
+    {
+        return _contexto.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id && l.ExcluidoEm == null, ct);
+    }
+
     public Task<int> ContarCopiasAsync(Guid lojaId, CancellationToken ct)
     {
         return _contexto.Lojas.CountAsync(l => l.OrigemId == lojaId && l.ExcluidoEm == null, ct);

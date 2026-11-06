@@ -783,6 +783,9 @@ namespace HomeGroceryApi.Infrastructure.Persistencia.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
+                    b.Property<bool>("SemSenhaPropria")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 

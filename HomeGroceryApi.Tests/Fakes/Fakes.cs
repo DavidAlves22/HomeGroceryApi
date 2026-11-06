@@ -41,11 +41,11 @@ public sealed class ServicoDeContasFake : IServicoDeContas
 {
     private readonly Dictionary<string, (ContaDoUsuario Conta, string Senha)> _contas = new();
 
-    public Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct)
+    public Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct, bool semSenhaPropria = false)
     {
         if (_contas.ContainsKey(email)) return Task.FromResult(new ResultadoDeCriacaoDeConta(null, true, []));
 
-        var conta = new ContaDoUsuario(Guid.NewGuid(), nome, email);
+        var conta = new ContaDoUsuario(Guid.NewGuid(), nome, email, SemSenhaPropria: semSenhaPropria);
         _contas[email] = (conta, senha);
         return Task.FromResult(new ResultadoDeCriacaoDeConta(conta.Id, false, []));
     }
@@ -87,6 +87,11 @@ public sealed class ServicoDeContasFake : IServicoDeContas
 
         _contas[chave] = (_contas[chave].Conta with { Bloqueada = bloqueadoEm is not null }, _contas[chave].Senha);
         return Task.FromResult(true);
+    }
+
+    public Task<bool> ConferirSenhaAsync(Guid usuarioId, string senha, CancellationToken ct)
+    {
+        return Task.FromResult(_contas.Values.Any(v => v.Conta.Id == usuarioId && v.Senha == senha));
     }
 
     public Task<bool> EstaBloqueadaAsync(Guid usuarioId, CancellationToken ct)

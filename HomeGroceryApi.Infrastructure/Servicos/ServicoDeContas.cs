@@ -22,9 +22,9 @@ public sealed class ServicoDeContas : IServicoDeContas
         _relogio = relogio;
     }
 
-    public async Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct)
+    public async Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct, bool semSenhaPropria = false)
     {
-        var usuario = new ApplicationUser { Id = Guid.CreateVersion7(), UserName = email, Email = email, Nome = nome, CriadoEm = _relogio.AgoraUtc, UltimoAcessoEm = _relogio.AgoraUtc };
+        var usuario = new ApplicationUser { Id = Guid.CreateVersion7(), UserName = email, Email = email, Nome = nome, CriadoEm = _relogio.AgoraUtc, UltimoAcessoEm = _relogio.AgoraUtc, SemSenhaPropria = semSenhaPropria };
         var resultado = await _usuarios.CreateAsync(usuario, senha);
 
         if (resultado.Succeeded) return new ResultadoDeCriacaoDeConta(usuario.Id, false, []);
@@ -61,7 +61,7 @@ public sealed class ServicoDeContas : IServicoDeContas
         return usuario is null ? null : ParaConta(usuario);
     }
 
-    private static ContaDoUsuario ParaConta(ApplicationUser usuario) => new(usuario.Id, usuario.Nome, usuario.Email!, usuario.BloqueadoEm is not null);
+    private static ContaDoUsuario ParaConta(ApplicationUser usuario) => new(usuario.Id, usuario.Nome, usuario.Email!, usuario.BloqueadoEm is not null, usuario.SemSenhaPropria);
 
     public async Task<bool> DefinirBloqueioAsync(Guid usuarioId, DateTime? bloqueadoEm, CancellationToken ct)
     {
@@ -71,6 +71,12 @@ public sealed class ServicoDeContas : IServicoDeContas
         usuario.BloqueadoEm = bloqueadoEm;
         await _usuarios.UpdateAsync(usuario);
         return true;
+    }
+
+    public async Task<bool> ConferirSenhaAsync(Guid usuarioId, string senha, CancellationToken ct)
+    {
+        var usuario = await _usuarios.FindByIdAsync(usuarioId.ToString());
+        return usuario is not null && await _usuarios.CheckPasswordAsync(usuario, senha);
     }
 
     public async Task<bool> EstaBloqueadaAsync(Guid usuarioId, CancellationToken ct)
@@ -95,6 +101,7 @@ public sealed class ServicoDeContas : IServicoDeContas
         if (erros.Count > 0) return erros.Distinct().ToList();
 
         usuario.PasswordHash = _usuarios.PasswordHasher.HashPassword(usuario, novaSenha);
+        usuario.SemSenhaPropria = false;
         var gravado = await _usuarios.UpdateAsync(usuario);
         if (!gravado.Succeeded) return ["Não foi possível trocar a senha agora. Tente de novo."];
 

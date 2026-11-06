@@ -123,10 +123,17 @@ public class PainelAdminTests
         Assert.NotEqual(JsonValueKind.Null, linha.GetProperty("ultimoAcessoEm").ValueKind);
     }
 
+    /// <summary>O banco é compartilhado entre os testes e a lista é paginada (mais recentes primeiro): procura em todas as páginas.</summary>
     private static async Task<JsonElement> LinhaDaContaAsync(UsuarioDeTeste admin, Guid id)
     {
-        var (_, usuarios) = await admin.GetAsync("/admin/usuarios");
-        return usuarios.GetProperty("itens").EnumerateArray().First(i => i.GetProperty("id").GetGuid() == id);
+        for (var pagina = 1; ; pagina++)
+        {
+            var (_, usuarios) = await admin.GetAsync($"/admin/usuarios?pagina={pagina}");
+            var itens = usuarios.GetProperty("itens").EnumerateArray().ToList();
+            var achou = itens.Where(i => i.GetProperty("id").GetGuid() == id).Select(i => (JsonElement?)i).FirstOrDefault();
+            if (achou is { } linha) return linha;
+            if (itens.Count == 0) throw new InvalidOperationException($"Conta {id} não está na lista do painel.");
+        }
     }
 
     [PostgresFact]

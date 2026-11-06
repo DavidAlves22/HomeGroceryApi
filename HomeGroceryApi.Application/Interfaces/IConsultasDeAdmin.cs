@@ -17,4 +17,7 @@ public interface IConsultasDeAdmin
     Task<AdminInsightsResposta> InsightsAsync(DateTime agora, CancellationToken ct);
 
     Task<AdminUsuariosResposta> UsuariosAsync(int pagina, int tamanho, CancellationToken ct);
+
+    /// <summary>Mapas de mercado de todos os grupos (não excluídos), com quem é o dono, para o administrador moderar.</summary>
+    Task<AdminMapasResposta> MapasAsync(int limite, CancellationToken ct);
 }

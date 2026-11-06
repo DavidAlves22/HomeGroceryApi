@@ -39,6 +39,32 @@ public sealed class AdminController : ControllerBase
         return Ok(await casoDeUso.ExecutarAsync(pagina, ct));
     }
 
+    [HttpDelete("usuarios/{id:guid}")]
+    public async Task<IActionResult> ExcluirConta(Guid id, [FromServices] ExcluirContaPeloAdmin casoDeUso, CancellationToken ct)
+    {
+        await casoDeUso.ExecutarAsync(id, ct);
+        return NoContent();
+    }
+
+    [HttpGet("mapas")]
+    public async Task<ActionResult<AdminMapasResposta>> Mapas([FromServices] ListarMapasDoPainel casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(ct));
+    }
+
+    [HttpGet("mapas/{id:guid}")]
+    public async Task<ActionResult<CatalogoMercadoDetalheResposta>> Mapa(Guid id, [FromServices] ObterMapaDoPainel casoDeUso, CancellationToken ct)
+    {
+        return Ok(await casoDeUso.ExecutarAsync(id, ct));
+    }
+
+    [HttpDelete("mapas/{id:guid}")]
+    public async Task<IActionResult> ExcluirMapa(Guid id, [FromServices] ExcluirMapaPeloAdmin casoDeUso, CancellationToken ct)
+    {
+        await casoDeUso.ExecutarAsync(id, ct);
+        return NoContent();
+    }
+
     [HttpPut("usuarios/{id:guid}/bloqueio")]
     public async Task<IActionResult> Bloqueio(Guid id, [FromBody] AdminBloqueioRequisicao requisicao, [FromServices] DefinirBloqueioDeConta casoDeUso, CancellationToken ct)
     {

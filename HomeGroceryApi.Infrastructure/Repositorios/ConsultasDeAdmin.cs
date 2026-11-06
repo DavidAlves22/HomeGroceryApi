@@ -1,6 +1,7 @@
 using System.Globalization;
 using HomeGroceryApi.Application.Dtos;
 using HomeGroceryApi.Application.Interfaces;
+using HomeGroceryApi.Domain.Entidades;
 using HomeGroceryApi.Domain.Enums;
 using HomeGroceryApi.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -231,6 +232,48 @@ public sealed class ConsultasDeAdmin : IConsultasDeAdmin
         }).ToList();
 
         return new AdminUsuariosResposta(total, pagina, tamanho, itens);
+    }
+
+    public async Task<AdminMapasResposta> MapasAsync(int limite, CancellationToken ct)
+    {
+        var nomePadrao = Loja.NomePadraoDaSecao.ToLowerInvariant();
+        var lojas = _db.Lojas.AsNoTracking().Where(l => l.ExcluidoEm == null);
+        var total = await lojas.CountAsync(ct);
+
+        var linhas = await lojas.OrderBy(l => l.Nome).ThenBy(l => l.Id).Take(limite)
+            .Select(l => new
+            {
+                l.Id,
+                l.Nome,
+                l.Cidade,
+                l.GrupoId,
+                l.OrigemId,
+                l.Versao,
+                Secoes = _db.Secoes.Count(s => s.LojaId == l.Id),
+                SecoesComNome = _db.Secoes.Count(s => s.LojaId == l.Id && s.Nome.Trim().ToLower() != nomePadrao),
+                Copias = _db.Lojas.Count(c => c.OrigemId == l.Id && c.ExcluidoEm == null),
+            })
+            .ToListAsync(ct);
+
+        var idsDosGrupos = linhas.Select(l => l.GrupoId).Distinct().ToList();
+        var grupos = await _db.Grupos.Where(g => idsDosGrupos.Contains(g.Id)).ToDictionaryAsync(g => g.Id, g => g.Nome, ct);
+
+        // Dono = o administrador mais antigo do grupo (quem criou o grupo, na prática).
+        var donos = await (from m in _db.Membros
+                           join u in _db.Users on m.UsuarioId equals u.Id
+                           where idsDosGrupos.Contains(m.GrupoId) && m.Papel == PapelNoGrupoEnum.Administrador
+                           orderby m.EntrouEm
+                           select new { m.GrupoId, u.Nome, Email = u.Email }).ToListAsync(ct);
+        var donoPorGrupo = donos.GroupBy(d => d.GrupoId).ToDictionary(g => g.Key, g => g.First());
+
+        var itens = linhas.Select(l =>
+        {
+            donoPorGrupo.TryGetValue(l.GrupoId, out var dono);
+            var noCatalogo = !string.IsNullOrEmpty(l.Cidade) && (l.OrigemId == null || l.Versao > 1) && l.SecoesComNome >= Loja.MinimoDeSecoesParaOCatalogo;
+            return new AdminMapaResposta(l.Id, l.Nome, l.Cidade, l.SecoesComNome, l.Secoes, l.Copias, l.OrigemId != null, noCatalogo, grupos.GetValueOrDefault(l.GrupoId, string.Empty), dono?.Nome, dono?.Email);
+        }).ToList();
+
+        return new AdminMapasResposta(total, itens);
     }
 
     /// <summary>Conta quantos horários caem em cada dia de Brasília, devolvendo também os dias sem nada (valor 0).</summary>

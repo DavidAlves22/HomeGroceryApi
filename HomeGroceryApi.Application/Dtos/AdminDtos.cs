@@ -42,6 +42,14 @@ public sealed record AdminUsuarioResposta(
 
 public sealed record AdminBloqueioRequisicao(bool Bloqueado);
 
+/// <param name="SecoesComNome">Seções com nome próprio (as que contam para o catálogo).</param>
+/// <param name="Copias">Quantos mercados de outros grupos nasceram deste mapa.</param>
+/// <param name="Copia">Este mapa nasceu da cópia de outro.</param>
+/// <param name="NoCatalogo">Outros grupos conseguem ver e copiar este mapa.</param>
+public sealed record AdminMapaResposta(Guid Id, string Nome, string? Cidade, int SecoesComNome, int Secoes, int Copias, bool Copia, bool NoCatalogo, string Grupo, string? DonoNome, string? DonoEmail);
+
+public sealed record AdminMapasResposta(int Total, IReadOnlyList<AdminMapaResposta> Itens);
+
 public sealed record AdminUsuariosResposta(int Total, int Pagina, int Tamanho, IReadOnlyList<AdminUsuarioResposta> Itens);
 
 /// <summary>Das contas criadas há pelo menos <paramref name="Dias"/> dias, quantas ainda abriam o app N dias depois do cadastro.</summary>

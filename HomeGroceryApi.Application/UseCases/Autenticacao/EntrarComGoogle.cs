@@ -68,7 +68,7 @@ public sealed class EntrarComGoogle
 
         await _unidadeDeTrabalho.ExecutarEmTransacaoAsync(async () =>
         {
-            var criacao = await _contas.CriarAsync(email, nome, SenhaAleatoria(), ct);
+            var criacao = await _contas.CriarAsync(email, nome, SenhaAleatoria(), ct, semSenhaPropria: true);
             if (!criacao.Sucesso) throw new ErroDeAutenticacao("Não foi possível criar sua conta com o Google.");
 
             var usuarioId = criacao.UsuarioId!.Value;

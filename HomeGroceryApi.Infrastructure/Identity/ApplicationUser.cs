@@ -14,4 +14,7 @@ public sealed class ApplicationUser : IdentityUser<Guid>
 
     /// <summary>Quando o administrador bloqueou a conta; nulo = liberada. Bloqueada não entra, não renova e não usa a API.</summary>
     public DateTime? BloqueadoEm { get; set; }
+
+    /// <summary>Criada pelo login com Google: a senha é aleatória e desconhecida até a pessoa criar uma ("Esqueci minha senha").</summary>
+    public bool SemSenhaPropria { get; set; }
 }

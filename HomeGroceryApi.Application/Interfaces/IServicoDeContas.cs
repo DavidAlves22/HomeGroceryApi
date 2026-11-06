@@ -8,7 +8,8 @@ namespace HomeGroceryApi.Application.Interfaces;
 /// </summary>
 public interface IServicoDeContas
 {
-    Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct);
+    /// <summary>`semSenhaPropria`: a senha é aleatória (login com Google); o dono ainda não escolheu uma.</summary>
+    Task<ResultadoDeCriacaoDeConta> CriarAsync(string email, string nome, string senha, CancellationToken ct, bool semSenhaPropria = false);
     Task<ContaDoUsuario?> ValidarCredenciaisAsync(string email, string senha, CancellationToken ct);
     Task<ContaDoUsuario?> ObterPorIdAsync(Guid usuarioId, CancellationToken ct);
     Task<ContaDoUsuario?> ObterPorEmailAsync(string email, CancellationToken ct);
@@ -17,6 +18,9 @@ public interface IServicoDeContas
     Task<IReadOnlyList<string>> RedefinirSenhaAsync(Guid usuarioId, string novaSenha, CancellationToken ct);
 
     Task AlterarNomeAsync(Guid usuarioId, string nome, CancellationToken ct);
+
+    /// <summary>Confere a senha sem contar como tentativa de login nem mexer no bloqueio por tentativas (quem já está logado confirmando uma ação).</summary>
+    Task<bool> ConferirSenhaAsync(Guid usuarioId, string senha, CancellationToken ct);
 
     /// <summary>Marca o último acesso da conta (login, cadastro ou renovação de sessão).</summary>
     Task RegistrarAcessoAsync(Guid usuarioId, DateTime agora, CancellationToken ct);

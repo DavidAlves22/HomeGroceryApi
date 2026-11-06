@@ -17,6 +17,9 @@ public interface ILojaRepository
     Task RemoverVinculosDaCategoriaAsync(Guid grupoId, Guid categoriaId, CancellationToken ct);
 
     Task<Loja?> ObterDoCatalogoAsync(Guid id, CancellationToken ct);
+
+    /// <summary>Mapa de QUALQUER grupo, sem exigir que cumpra a regra do catálogo. Só para o painel do administrador.</summary>
+    Task<Loja?> ObterParaModeracaoAsync(Guid id, CancellationToken ct);
     Task<int> ContarCopiasAsync(Guid lojaId, CancellationToken ct);
     Task<List<Secao>> ListarSecoesDoCatalogoAsync(Guid lojaId, CancellationToken ct);
     Task<List<SecaoCategoria>> ListarVinculosDoCatalogoAsync(Guid lojaId, CancellationToken ct);
